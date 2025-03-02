@@ -1,7 +1,7 @@
 const std = @import("std");
 const x11 = @import("x11.zig");
 const pixel = @import("pixel.zig");
-const obj_loader = @import("obj_loader.zig");
+const model = @import("model.zig");
 const math = @import("math.zig");
 const Buffer2D = @import("buffer.zig").Buffer2D;
 const SphereCamera = @import("camera.zig").SphereCamera;
@@ -56,9 +56,9 @@ pub const DB = struct {
     gc: x11.GC,
     pixels: Buffer2D(pixel.BGRA),
     image: ?*x11.XImage,
-    mesh: obj_loader.Mesh,
+    mesh: model.Mesh,
     allocator: std.mem.Allocator,
-    camera: SphereCamera(),
+    camera: SphereCamera,
     vertices: []math.Vec4f,
 };
 
@@ -112,24 +112,29 @@ pub fn redraw(db: *DB) void {
     db.*.pixels.clear(std.mem.zeroes(pixel.BGRA));
 
     const aspect: f32 = @as(f32, @floatFromInt(wa.width)) / @as(f32, @floatFromInt(wa.height));
-    const model = math.M44.translate_mat(math.Vec3f.from(0.0, 0.0, 0.0));
     const proj = math.M44.perspective(math.radians(90.0), aspect, 0.1, 100.0);
     // const proj = math.M44.orto(aspect, 1.0, 1.0, 100.0);
     const viewport = math.M44.viewport(wa.x, wa.y, wa.width, wa.height, 2.0);
 
-    const mat = viewport.mul(proj).mul(db.*.camera.view()).mul(model);
+    const mat = proj.mul(db.*.camera.view());
 
+    const modelMat = mat.mul(math.M44.translate_mat(math.Vec3f.from(0.0, -1.0, 0.0)));
     const vertices = db.*.vertices;
     for (0.., db.*.mesh.vertices) |i, v| {
-        vertices[i] = mat.apply_to_vec4(math.Vec4f.from(v[0], v[1], v[2], 1.0)).perspective_div();
+        vertices[i] = modelMat.apply_to_vec4(math.Vec4f.from(v[0], v[1], v[2], 1.0)).perspective_div();
     }
 
     for (db.*.mesh.objects) |obj| {
         var i: usize = 0;
         for (obj.face_vertices) |cnt| {
             for (i..(i + cnt - 1)) |idx| {
-                const p1, const p2 = .{ vertices[obj.indices[idx].vertex], vertices[obj.indices[idx + 1].vertex] };
+                var p1, var p2 = .{ vertices[obj.indices[idx].vertex], vertices[obj.indices[idx + 1].vertex] };
 
+                if (p1.w < 0.0 or p2.w < 0.0) {
+                    continue;
+                }
+
+                p1, p2 = .{ p1.perspective_div(), p2.perspective_div() };
                 if (p1.z < 0.1 or p1.z > 100.0 or p2.z < 0.1 or p2.z > 100.0) {
                     continue;
                 }
@@ -137,11 +142,13 @@ pub fn redraw(db: *DB) void {
                 const mnP: math.Vec2f = math.Vec2f.from(@min(p1.x, p2.x), @min(p1.y, p2.y));
                 const mxP: math.Vec2f = math.Vec2f.from(@max(p1.x, p2.x), @max(p1.y, p2.y));
 
-                if (mxP.x < @as(f32, @floatFromInt(wa.x)) or mxP.y < @as(f32, @floatFromInt(wa.y)) or mnP.x > @as(f32, @floatFromInt(wa.x + wa.width)) or mnP.y > @as(f32, @floatFromInt(wa.y + wa.height))) {
+                if (mxP.x < -1.0 or mxP.y < -1.0 or mnP.x > 1.0 or mnP.y > 1.0) {
                     continue;
                 }
 
-                line(db.*, math.Vec2f.from(p1.x, p1.y), math.Vec2f.from(p2.x, p2.y), pixel.BGRA.make(0x00, 0x00, 0xff, 0x00));
+                p1, p2 = .{ viewport.apply_to_vec4(p1), viewport.apply_to_vec4(p2) };
+
+                line(db.*, math.Vec2f.from(p1.x, p1.y), math.Vec2f.from(p2.x, p2.y), pixel.BGRA.make(0xff, 0xff, 0xff, 0x00));
             }
 
             i += cnt;
@@ -155,12 +162,19 @@ pub fn redraw(db: *DB) void {
     const pointZ1 = math.Vec4f.from(0.0, 0.0, -1.0, 1.0);
     const pointZ2 = math.Vec4f.from(0.0, 0.0, 1.0, 1.0);
 
-    const pX1 = mat.apply_to_vec4(pointX1).perspective_div();
-    const pX2 = mat.apply_to_vec4(pointX2).perspective_div();
-    const pY1 = mat.apply_to_vec4(pointY1).perspective_div();
-    const pY2 = mat.apply_to_vec4(pointY2).perspective_div();
-    const pZ1 = mat.apply_to_vec4(pointZ1).perspective_div();
-    const pZ2 = mat.apply_to_vec4(pointZ2).perspective_div();
+    const pX1 = viewport.apply_to_vec4(mat.apply_to_vec4(pointX1).perspective_div());
+    const pX2 = viewport.apply_to_vec4(mat.apply_to_vec4(pointX2).perspective_div());
+    const pY1 = viewport.apply_to_vec4(mat.apply_to_vec4(pointY1).perspective_div());
+    const pY2 = viewport.apply_to_vec4(mat.apply_to_vec4(pointY2).perspective_div());
+    const pZ1 = viewport.apply_to_vec4(mat.apply_to_vec4(pointZ1).perspective_div());
+    const pZ2 = viewport.apply_to_vec4(mat.apply_to_vec4(pointZ2).perspective_div());
+
+    // const pX1 = mat.apply_to_vec4(pointX1).perspective_div();
+    // const pX2 = mat.apply_to_vec4(pointX2).perspective_div();
+    // const pY1 = mat.apply_to_vec4(pointY1).perspective_div();
+    // const pY2 = mat.apply_to_vec4(pointY2).perspective_div();
+    // const pZ1 = mat.apply_to_vec4(pointZ1).perspective_div();
+    // const pZ2 = mat.apply_to_vec4(pointZ2).perspective_div();
 
     line(db.*, math.Vec2f.from(pX1.x, pX1.y), math.Vec2f.from(pX2.x, pX2.y), pixel.BGRA.make(0x00, 0x00, 0xff, 0x00));
     line(db.*, math.Vec2f.from(pY1.x, pY1.y), math.Vec2f.from(pY2.x, pY2.y), pixel.BGRA.make(0x00, 0xff, 0x00, 0x00));
@@ -233,13 +247,13 @@ pub fn processEvents(db: *DB) void {
                         prev_x, prev_y = .{ event.xbutton.x, event.xbutton.y };
                     },
                     x11.Button4 => {
-                        db.*.camera.radius += 0.08;
+                        db.*.camera.radius += 0.5;
                         if (db.*.camera.radius > 100.0) {
                             db.*.camera.radius = 100.0;
                         }
                     },
                     x11.Button5 => {
-                        db.*.camera.radius -= 0.08;
+                        db.*.camera.radius -= 0.5;
                         if (db.*.camera.radius < 1.0) {
                             db.*.camera.radius = 1.0;
                         }
@@ -261,7 +275,7 @@ pub fn processEvents(db: *DB) void {
 }
 
 pub fn main() !void {
-    const mesh = obj_loader.parse_file(std.heap.page_allocator, "./objects/stalker.obj") catch |err| {
+    const mesh = model.parse_file(std.heap.page_allocator, "./objects/model.obj") catch |err| {
         return err;
     };
 
@@ -301,7 +315,7 @@ pub fn main() !void {
     };
     defer _ = allocator.free(buffer);
 
-    const camera = SphereCamera().from(math.Vec3f.from(0.0, 0.0, 0.0));
+    const camera = SphereCamera.from(math.Vec3f.from(0.0, 0.0, 0.0));
     const vertices = allocator.alloc(math.Vec4f, mesh.vertices.len) catch |err| {
         std.log.err("allocation error {}", .{err});
         return;

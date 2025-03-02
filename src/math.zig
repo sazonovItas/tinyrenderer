@@ -197,7 +197,7 @@ pub fn Vec4(comptime T: type) type {
         }
 
         pub fn perspective_div(self: Self) Self {
-            return Self.from(self.x / self.w, self.y / self.w, self.z / self.w, self.w / self.w);
+            return Self.from(self.x / abs(self.w), self.y / abs(self.w), self.z / abs(self.w), self.w / abs(self.w));
         }
     };
 }
