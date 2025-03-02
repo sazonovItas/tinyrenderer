@@ -1,0 +1,242 @@
+const std = @import("std");
+
+pub const RGBA = extern struct {
+    r: u8 align(1),
+    g: u8 align(1),
+    b: u8 align(1),
+    a: u8 align(1),
+
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == 4);
+    }
+
+    pub inline fn make(r: u8, g: u8, b: u8, a: u8) RGBA {
+        return RGBA{ .r = r, .g = g, .b = b, .a = a };
+    }
+
+    pub fn add(c1: RGBA, c2: RGBA) RGBA {
+        return RGBA.make(
+            @intFromFloat(@max(0, @min(255, (@as(f32, @floatFromInt(c1.r)) / 255 + @as(f32, @floatFromInt(c2.r)) / 255) * 255))),
+            @intFromFloat(@max(0, @min(255, (@as(f32, @floatFromInt(c1.g)) / 255 + @as(f32, @floatFromInt(c2.g)) / 255) * 255))),
+            @intFromFloat(@max(0, @min(255, (@as(f32, @floatFromInt(c1.b)) / 255 + @as(f32, @floatFromInt(c2.b)) / 255) * 255))),
+            @intFromFloat(@max(0, @min(255, (@as(f32, @floatFromInt(c1.a)) / 255 + @as(f32, @floatFromInt(c2.a)) / 255) * 255))),
+        );
+    }
+
+    pub fn multiply(c1: RGBA, c2: RGBA) RGBA {
+        const result = RGBA.make(
+            @intFromFloat(@as(f32, @floatFromInt(c1.r)) * (@as(f32, @floatFromInt(c2.r)) / 255)),
+            @intFromFloat(@as(f32, @floatFromInt(c1.g)) * (@as(f32, @floatFromInt(c2.g)) / 255)),
+            @intFromFloat(@as(f32, @floatFromInt(c1.b)) * (@as(f32, @floatFromInt(c2.b)) / 255)),
+            @intFromFloat(@as(f32, @floatFromInt(c1.a)) * (@as(f32, @floatFromInt(c2.a)) / 255)),
+        );
+        return result;
+    }
+
+    pub fn scale(self: RGBA, factor: f32) RGBA {
+        return RGBA.make(
+            @intFromFloat(@max(0, @min(255, @as(f32, @floatFromInt(self.r)) * factor))),
+            @intFromFloat(@max(0, @min(255, @as(f32, @floatFromInt(self.g)) * factor))),
+            @intFromFloat(@max(0, @min(255, @as(f32, @floatFromInt(self.b)) * factor))),
+            @intFromFloat(@max(0, @min(255, @as(f32, @floatFromInt(self.a)) * factor))),
+        );
+    }
+
+    pub fn blend(c1: RGBA, c2: RGBA) RGBA {
+        const a1: f32 = @as(f32, @floatFromInt(c1.a)) / 255;
+        return RGBA.make(
+            @intFromFloat((@as(f32, @floatFromInt(c1.r)) / 255 * a1 + @as(f32, @floatFromInt(c2.r)) / 255 * (1 - a1)) * 255),
+            @intFromFloat((@as(f32, @floatFromInt(c1.g)) / 255 * a1 + @as(f32, @floatFromInt(c2.g)) / 255 * (1 - a1)) * 255),
+            @intFromFloat((@as(f32, @floatFromInt(c1.b)) / 255 * a1 + @as(f32, @floatFromInt(c2.b)) / 255 * (1 - a1)) * 255),
+            @intFromFloat((@as(f32, @floatFromInt(c1.a)) / 255 * a1 + @as(f32, @floatFromInt(c2.a)) / 255 * (1 - a1)) * 255),
+        );
+    }
+
+    pub fn mean(c1: RGBA, c2: RGBA, c3: RGBA, c4: RGBA) RGBA {
+        return RGBA.make(
+            @as(u8, @intCast((@as(u16, @intCast(c1.r)) + @as(u16, @intCast(c2.r)) + @as(u16, @intCast(c3.r)) + @as(u16, @intCast(c4.r))) / 4)),
+            @as(u8, @intCast((@as(u16, @intCast(c1.g)) + @as(u16, @intCast(c2.g)) + @as(u16, @intCast(c3.g)) + @as(u16, @intCast(c4.g))) / 4)),
+            @as(u8, @intCast((@as(u16, @intCast(c1.b)) + @as(u16, @intCast(c2.b)) + @as(u16, @intCast(c3.b)) + @as(u16, @intCast(c4.b))) / 4)),
+            @as(u8, @intCast((@as(u16, @intCast(c1.a)) + @as(u16, @intCast(c2.a)) + @as(u16, @intCast(c3.a)) + @as(u16, @intCast(c4.a))) / 4)),
+        );
+    }
+
+    pub fn tint(color: RGBA, other: RGBA) RGBA {
+        return RGBA.make(
+            @intFromFloat((@as(f32, @floatFromInt(color.r)) * @as(f32, @floatFromInt(other.r))) / 256),
+            @intFromFloat((@as(f32, @floatFromInt(color.g)) * @as(f32, @floatFromInt(other.g))) / 256),
+            @intFromFloat((@as(f32, @floatFromInt(color.b)) * @as(f32, @floatFromInt(other.b))) / 256),
+            @intFromFloat((@as(f32, @floatFromInt(color.a)) * @as(f32, @floatFromInt(other.a))) / 256),
+        );
+    }
+
+    pub fn from(comptime T: type, color: T) RGBA {
+        return switch (T) {
+            RGB, BGR => RGBA{ .r = color.r, .g = color.g, .b = color.b, .a = 255 },
+            BGRA => RGBA{ .r = color.r, .g = color.g, .b = color.b, .a = color.a },
+            RGBA => color,
+            else => @compileError("conversion from " ++ @typeName(T) ++ " -> " ++ @typeName(RGBA) ++ " not implemented!"),
+        };
+    }
+};
+
+pub const BGRA = extern struct {
+    b: u8 align(1),
+    g: u8 align(1),
+    r: u8 align(1),
+    a: u8 align(1),
+
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == 4);
+    }
+
+    pub inline fn make(r: u8, g: u8, b: u8, a: u8) BGRA {
+        return BGRA{ .r = r, .g = g, .b = b, .a = a };
+    }
+
+    pub fn add(c1: BGRA, c2: BGRA) BGRA {
+        return BGRA.make(
+            @intFromFloat(@max(0, @min(255, (@as(f32, @floatFromInt(c1.r)) / 255 + @as(f32, @floatFromInt(c2.r)) / 255) * 255))),
+            @intFromFloat(@max(0, @min(255, (@as(f32, @floatFromInt(c1.g)) / 255 + @as(f32, @floatFromInt(c2.g)) / 255) * 255))),
+            @intFromFloat(@max(0, @min(255, (@as(f32, @floatFromInt(c1.b)) / 255 + @as(f32, @floatFromInt(c2.b)) / 255) * 255))),
+            @intFromFloat(@max(0, @min(255, (@as(f32, @floatFromInt(c1.a)) / 255 + @as(f32, @floatFromInt(c2.a)) / 255) * 255))),
+        );
+    }
+
+    pub fn multiply(c1: BGRA, c2: BGRA) BGRA {
+        const result = BGRA.make(
+            @intFromFloat(@as(f32, @floatFromInt(c1.r)) * (@as(f32, @floatFromInt(c2.r)) / 255)),
+            @intFromFloat(@as(f32, @floatFromInt(c1.g)) * (@as(f32, @floatFromInt(c2.g)) / 255)),
+            @intFromFloat(@as(f32, @floatFromInt(c1.b)) * (@as(f32, @floatFromInt(c2.b)) / 255)),
+            @intFromFloat(@as(f32, @floatFromInt(c1.a)) * (@as(f32, @floatFromInt(c2.a)) / 255)),
+        );
+        return result;
+    }
+
+    pub fn blend(c1: BGRA, c2: BGRA) BGRA {
+        const a1: f32 = @as(f32, @floatFromInt(c1.a)) / 255;
+        return BGRA.make(
+            @intFromFloat((@as(f32, @floatFromInt(c1.r)) / 255 * a1 + @as(f32, @floatFromInt(c2.r)) / 255 * (1 - a1)) * 255),
+            @intFromFloat((@as(f32, @floatFromInt(c1.g)) / 255 * a1 + @as(f32, @floatFromInt(c2.g)) / 255 * (1 - a1)) * 255),
+            @intFromFloat((@as(f32, @floatFromInt(c1.b)) / 255 * a1 + @as(f32, @floatFromInt(c2.b)) / 255 * (1 - a1)) * 255),
+            @intFromFloat((@as(f32, @floatFromInt(c1.a)) / 255 * a1 + @as(f32, @floatFromInt(c2.a)) / 255 * (1 - a1)) * 255),
+        );
+    }
+
+    pub fn tint(color: BGRA, other: BGRA) BGRA {
+        return BGRA.make(
+            @intFromFloat((@as(f32, @floatFromInt(color.r)) * @as(f32, @floatFromInt(other.r))) / 256),
+            @intFromFloat((@as(f32, @floatFromInt(color.g)) * @as(f32, @floatFromInt(other.g))) / 256),
+            @intFromFloat((@as(f32, @floatFromInt(color.b)) * @as(f32, @floatFromInt(other.b))) / 256),
+            @intFromFloat((@as(f32, @floatFromInt(color.a)) * @as(f32, @floatFromInt(other.a))) / 256),
+        );
+    }
+
+    pub fn mean(c1: BGRA, c2: BGRA, c3: BGRA, c4: BGRA) BGRA {
+        return BGRA.make(
+            @as(u8, @intCast((@as(u16, @intCast(c1.r)) + @as(u16, @intCast(c2.r)) + @as(u16, @intCast(c3.r)) + @as(u16, @intCast(c4.r))) / 4)),
+            @as(u8, @intCast((@as(u16, @intCast(c1.g)) + @as(u16, @intCast(c2.g)) + @as(u16, @intCast(c3.g)) + @as(u16, @intCast(c4.g))) / 4)),
+            @as(u8, @intCast((@as(u16, @intCast(c1.b)) + @as(u16, @intCast(c2.b)) + @as(u16, @intCast(c3.b)) + @as(u16, @intCast(c4.b))) / 4)),
+            @as(u8, @intCast((@as(u16, @intCast(c1.a)) + @as(u16, @intCast(c2.a)) + @as(u16, @intCast(c3.a)) + @as(u16, @intCast(c4.a))) / 4)),
+        );
+    }
+
+    pub fn from(comptime T: type, color: T) BGRA {
+        return switch (T) {
+            RGBA => BGRA.make(color.r, color.g, color.b, color.a),
+            BGR, RGB => BGRA.make(color.r, color.g, color.b, 255),
+            BGRA => color,
+            else => @compileError("conversion from " ++ T ++ " -> " ++ BGRA ++ " not implemented!"),
+        };
+    }
+};
+
+pub const RGB = extern struct {
+    r: u8 align(1),
+    g: u8 align(1),
+    b: u8 align(1),
+
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == 3);
+    }
+
+    pub inline fn make(r: u8, g: u8, b: u8) RGB {
+        return RGB{ .r = r, .g = g, .b = b };
+    }
+
+    pub fn scale(self: RGB, factor: f32) RGB {
+        return RGB.make(
+            @intFromFloat(@max(0, @min(255, @as(f32, @floatFromInt(self.r)) * factor))),
+            @intFromFloat(@max(0, @min(255, @as(f32, @floatFromInt(self.g)) * factor))),
+            @intFromFloat(@max(0, @min(255, @as(f32, @floatFromInt(self.b)) * factor))),
+        );
+    }
+
+    pub fn tint(color: RGB, other: RGB) RGB {
+        return RGB.make(
+            @intFromFloat((@as(f32, @floatFromInt(color.r)) * @as(f32, @floatFromInt(other.r))) / 256),
+            @intFromFloat((@as(f32, @floatFromInt(color.g)) * @as(f32, @floatFromInt(other.g))) / 256),
+            @intFromFloat((@as(f32, @floatFromInt(color.b)) * @as(f32, @floatFromInt(other.b))) / 256),
+        );
+    }
+
+    pub fn blend(c1: RGB, c2: RGB) RGB {
+        return RGB.make(
+            @intFromFloat((@as(f32, @floatFromInt(c1.r)) / 255 * 1 + @as(f32, @floatFromInt(c2.r)) / 255 * (1 - 1)) * 255),
+            @intFromFloat((@as(f32, @floatFromInt(c1.g)) / 255 * 1 + @as(f32, @floatFromInt(c2.g)) / 255 * (1 - 1)) * 255),
+            @intFromFloat((@as(f32, @floatFromInt(c1.b)) / 255 * 1 + @as(f32, @floatFromInt(c2.b)) / 255 * (1 - 1)) * 255),
+        );
+    }
+
+    pub fn from(comptime T: type, color: T) RGB {
+        return switch (T) {
+            BGRA, RGBA, BGR, RGB => RGB(color.r, color.g, color.b),
+            else => @compileError("conversion from " ++ @typeName(T) ++ " -> " ++ @typeName(RGB) ++ " not implemented!"),
+        };
+    }
+};
+
+pub const BGR = extern struct {
+    b: u8 align(1),
+    g: u8 align(1),
+    r: u8 align(1),
+
+    comptime {
+        std.debug.assert(@sizeOf(@This()) == 3);
+    }
+
+    pub inline fn make(r: u8, g: u8, b: u8) BGR {
+        return BGR{ .r = r, .g = g, .b = b };
+    }
+
+    pub fn scale(self: BGR, factor: f32) RGB {
+        return BGR.make(
+            @intFromFloat(@max(0, @min(255, @as(f32, @floatFromInt(self.r)) * factor))),
+            @intFromFloat(@max(0, @min(255, @as(f32, @floatFromInt(self.g)) * factor))),
+            @intFromFloat(@max(0, @min(255, @as(f32, @floatFromInt(self.b)) * factor))),
+        );
+    }
+
+    pub fn tint(color: BGR, other: RGB) RGB {
+        return BGR.make(
+            @intFromFloat((@as(f32, @floatFromInt(color.r)) * @as(f32, @floatFromInt(other.r))) / 256),
+            @intFromFloat((@as(f32, @floatFromInt(color.g)) * @as(f32, @floatFromInt(other.g))) / 256),
+            @intFromFloat((@as(f32, @floatFromInt(color.b)) * @as(f32, @floatFromInt(other.b))) / 256),
+        );
+    }
+
+    pub fn blend(c1: BGR, c2: RGB) RGB {
+        return BGR.make(
+            @intFromFloat((@as(f32, @floatFromInt(c1.r)) / 255 * 1 + @as(f32, @floatFromInt(c2.r)) / 255 * (1 - 1)) * 255),
+            @intFromFloat((@as(f32, @floatFromInt(c1.g)) / 255 * 1 + @as(f32, @floatFromInt(c2.g)) / 255 * (1 - 1)) * 255),
+            @intFromFloat((@as(f32, @floatFromInt(c1.b)) / 255 * 1 + @as(f32, @floatFromInt(c2.b)) / 255 * (1 - 1)) * 255),
+        );
+    }
+
+    pub fn from(comptime T: type, color: T) BGR {
+        return switch (T) {
+            BGRA, BGRA, BGR, RGB => BGR.make(color.r, color.g, color.b),
+            else => @compileError("conversion from " ++ @typeName(T) ++ " -> " ++ @typeName(BGR) ++ " not implemented!"),
+        };
+    }
+};
