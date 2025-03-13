@@ -1,7 +1,6 @@
 #include "model.h"
 #include "gl.h"
 
-#include <algorithm>
 #include <fstream>
 #include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
@@ -67,9 +66,9 @@ Model::Model(const std::string filename) {
 
   triangulate(faceVertCnt);
 
-  transformed = std::vector<glm::vec4>(verts.size());
-  for (int i = 0; i < transformed.size(); i++) {
-    transformed[i] = glm::vec4(verts[i], 1.0);
+  transformedVerts = std::vector<glm::vec4>(verts.size());
+  for (int i = 0; i < transformedVerts.size(); i++) {
+    transformedVerts[i] = glm::vec4(verts[i], 1.0);
   }
 }
 
@@ -81,27 +80,50 @@ void Model::triangulate(std::vector<int> &faceVertCnt) {
     int l = offset, r = offset + vertCnt;
 
     std::vector<Index> face(faces.begin() + l, faces.begin() + r);
-
     while (face.size() > 3) {
       for (int i = 0; i < face.size(); i++) {
-        glm::vec3 v[3] = {
+        int vCnt = face.size();
+        glm::vec3 beforeV[3] = {
             verts[face[i].vert],
-            verts[face[(i + 1) % 3].vert],
-            verts[face[(i + 2) % 3].vert],
+            verts[face[(i + 1) % vCnt].vert],
+            verts[face[(i + 2) % vCnt].vert],
         };
 
-        glm::vec3 forward =
-            glm::normalize(glm::cross(v[1] - v[0], v[1] - v[2]));
-        glm::vec3 right = v[1] - v[0];
+        glm::vec3 forward = glm::normalize(
+            glm::cross(beforeV[0] - beforeV[1], beforeV[2] - beforeV[1]));
+        glm::vec3 right = beforeV[1] - beforeV[0];
         glm::vec3 up = glm::cross(forward, right);
 
         auto triangleMat = gl::view(forward, right, up);
 
+        glm::vec4 afterV[3] = {
+            triangleMat * glm::vec4(beforeV[0], 1.0),
+            triangleMat * glm::vec4(beforeV[1], 1.0),
+            triangleMat * glm::vec4(beforeV[2], 1.0),
+        };
+
+        glm::vec3 v[3] = {
+            glm::vec3(afterV[0].x, afterV[0].y, afterV[0].z),
+            glm::vec3(afterV[1].x, afterV[1].y, afterV[1].z),
+            glm::vec3(afterV[2].x, afterV[2].y, afterV[2].z),
+        };
+
+        float angle = glm::cross(v[0] - v[1], v[2] - v[1]).z;
+
+        if (angle < 0.0) {
+          continue;
+        }
+
         bool ok = true;
 
+        for (int j = (i + 2) % vCnt; j != i; j = (j + 1) % vCnt) {
+        }
+
         if (ok) {
-          trianguleatedFaces.push_back(face[i % 3]);
-          face.erase(face.begin() + i % 3);
+          trianguleatedFaces.push_back(face[i]);
+          trianguleatedFaces.push_back(face[(i + 1) % vCnt]);
+          trianguleatedFaces.push_back(face[(i + 2) % vCnt]);
+          face.erase(face.begin() + (i + 1) % vCnt);
           break;
         }
       }

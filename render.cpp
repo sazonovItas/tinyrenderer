@@ -10,8 +10,9 @@ void VertexTransformTask::doWork() {
   std::pair<int, int> range = _ctx.range;
 
   for (int i = range.first; i < range.second; i++) {
-    model->transformed[i] = _ctx.viewport * _ctx.proj * _ctx.view *
-                            _ctx.transform * glm::vec4(model->vert(i), 1.0);
+    model->transformedVerts[i] = _ctx.viewport * _ctx.proj * _ctx.view *
+                                 _ctx.transform *
+                                 glm::vec4(model->vert(i), 1.0);
   }
 }
 
@@ -21,12 +22,13 @@ void RenderLineTask::doWork() {
   Model *model = _ctx.model;
   std::pair<int, int> range = _ctx.range;
   int width = _ctx.image->width, height = _ctx.image->height;
+  float zNear = _ctx.zNear, zFar = _ctx.zFar;
 
   for (int iface = range.first; iface < range.second; iface++) {
     glm::vec4 v[3] = {
-        model->transformed[model->vertIdx(iface, 0)],
-        model->transformed[model->vertIdx(iface, 1)],
-        model->transformed[model->vertIdx(iface, 2)],
+        model->transformedVerts[model->vertIdx(iface, 0)],
+        model->transformedVerts[model->vertIdx(iface, 1)],
+        model->transformedVerts[model->vertIdx(iface, 2)],
     };
 
     for (int i = 0; i < 3; i++) {
@@ -38,7 +40,7 @@ void RenderLineTask::doWork() {
       v1.x /= v1.w, v1.y /= v1.w, v1.z /= v1.w, v1.w /= v1.w;
       v2.x /= v2.w, v2.y /= v2.w, v2.z /= v2.w, v2.w /= v2.w;
 
-      if (v1.z < 0.1 || v1.z > 100.0 || v2.z < 0.1 || v2.z > 100.0)
+      if (v1.z < zNear || v1.z > zFar || v2.z < zNear || v2.z > zFar)
         continue;
 
       glm::vec2 mnV = glm::vec2(std::min(v1.x, v2.x), std::min(v1.y, v2.y));

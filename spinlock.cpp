@@ -1,7 +1,5 @@
 #include "spinlock.h"
 
-#define SPINLOCK_LOOP_COUNT 2400
-
 void spinlock::lock() {
 #define do_nothing
 
