@@ -2,6 +2,7 @@
 #include "gl.h"
 #include "image.h"
 #include "model.h"
+#include "render.h"
 #include "thread_pool.h"
 
 #include <GL/gl.h>
@@ -11,8 +12,6 @@
 #include <SDL2/SDL_stdinc.h>
 #include <SDL2/SDL_surface.h>
 #include <SDL2/SDL_video.h>
-#include <SDL_timer.h>
-#include <cstdint>
 #include <glm/ext.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/fwd.hpp>
@@ -20,6 +19,8 @@
 #include <glm/matrix.hpp>
 #include <iostream>
 #include <stdexcept>
+
+#define MODEL "models/house.obj"
 
 uint32_t WIDTH = 1920;
 uint32_t HEIGHT = 1080;
@@ -36,6 +37,9 @@ public:
 private:
   SDL_Window *window;
   MT::ThreadPool *threadPool;
+  Model *model;
+  Image *image;
+  Camera camera;
 
   void initThreadPool() {
 #define THREAD_COUNT 12
@@ -59,9 +63,9 @@ private:
   }
 
   void mainLoop() {
-    Model *model = new Model("models/house.obj");
-    Image *image = new Image(WIDTH, HEIGHT);
-    Camera camera(glm::vec3(0.0, 0.0, 0.0), 10.0f);
+    model = new Model(MODEL);
+    image = new Image(WIDTH, HEIGHT);
+    camera = Camera(glm::vec3(0.0, 0.0, 0.0), 10.0f);
 
     bool loop = true;
     while (loop) {
@@ -97,103 +101,29 @@ private:
       }
 
       if (rerender)
-        renderSDL(model, image, camera);
+        renderSDL();
     }
   }
 
-  void renderSDL(Model *model, Image *image, Camera &camera) {
+  void renderSDL() {
     auto surface = SDL_GetWindowSurface(window);
 
     image->resize(surface->w, surface->h);
     image->clear(0x00);
 
-    render(model, image, camera);
+    render();
 
     SDL_memcpy4(surface->pixels, image->data(), image->size());
     SDL_UpdateWindowSurface(window);
   }
 
-  class VertexTransformTask : public MT::Task {
-  public:
-    struct Context {
-      Model *model;
+  void render() {
+#define Z_NEAR 0.1f
+#define Z_FAR 100.0f
+#define FOV 120.0f
 
-      glm::mat4x4 proj, view;
-
-      std::pair<int, int> range;
-    };
-
-    VertexTransformTask(Context _ctx) : Task() { this->_ctx = _ctx; }
-
-    void doWork() override {
-      Model *model = _ctx.model;
-      std::pair<int, int> range = _ctx.range;
-
-      for (int i = range.first; i < range.second; i++) {
-        model->transformed[i] =
-            _ctx.proj * _ctx.view * glm::vec4(model->vert(i), 1.0);
-      }
-    }
-
-  private:
-    Context _ctx;
-  };
-
-  class RenderTask : public MT::Task {
-  public:
-    struct Context {
-      Model *model;
-      Image *image;
-
-      glm::mat4x4 viewport;
-      std::pair<int, int> range;
-    };
-
-    RenderTask(Context _ctx) : Task() { this->_ctx = _ctx; }
-
-    void doWork() override {
-      Model *model = _ctx.model;
-      std::pair<int, int> range = _ctx.range;
-
-      for (int iface = range.first; iface < range.second; iface++) {
-        glm::vec4 v[3] = {
-            model->transformed[model->vertIdx(iface, 0)],
-            model->transformed[model->vertIdx(iface, 1)],
-            model->transformed[model->vertIdx(iface, 2)],
-        };
-
-        for (int i = 0; i < 3; i++)
-          v[i].x /= v[i].w, v[i].y /= v[i].w, v[i].z /= v[i].w,
-              v[i].w /= abs(v[i].w);
-
-        for (int i = 0; i < 3; i++) {
-          glm::vec4 v1 = v[i], v2 = v[(i + 1) % 3];
-
-          if (v1.z < 0.1 || v1.z > 100.0 || v2.z < 0.1 || v2.z > 100.0 ||
-              v1.w < 0.0 || v2.w < 0.0)
-            continue;
-
-          glm::vec2 mnV = glm::vec2(std::min(v1.x, v2.x), std::min(v1.y, v2.y));
-          glm::vec2 mxV = glm::vec2(std::max(v1.x, v2.x), std::max(v1.y, v2.y));
-
-          if (mxV.x < -1.0 || mxV.y < -1.0 || mnV.x > 1.0 || mnV.y > 1.0)
-            continue;
-
-          v1 = _ctx.viewport * v1;
-          v2 = _ctx.viewport * v2;
-
-          gl::line(v1.x, v1.y, v2.x, v2.y, *_ctx.image, 0x00FFFFFF);
-        }
-      }
-    }
-
-  private:
-    Context _ctx;
-  };
-
-  void render(Model *model, Image *image, Camera &camera) {
     float aspect = float(image->width) / float(image->height);
-    glm::mat4x4 proj = glm::perspective(90.0f, aspect, 0.1f, 100.0f);
+    glm::mat4x4 proj = glm::perspective(FOV, aspect, Z_NEAR, Z_FAR);
     glm::mat4x4 view = camera.view();
     glm::mat4x4 viewport = gl::viewport(0, 0, image->width, image->height);
 
@@ -203,6 +133,7 @@ private:
         .model = model,
         .proj = proj,
         .view = view,
+        .viewport = viewport,
     };
 
     int vertPerThread = model->nverts() / THREAD_COUNT;
@@ -217,21 +148,22 @@ private:
 
     threadPool->wait();
 
-    RenderTask::Context _rctx = {
+    RenderLineTask::Context _rctx = {
         .model = model,
         .image = image,
-        .viewport = viewport,
+        .zNear = Z_NEAR,
+        .zFar = Z_FAR,
     };
 
     int facePerThread = model->nfaces() / THREAD_COUNT;
 
     for (int i = 0; i < THREAD_COUNT - 1; i++) {
       _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
-      threadPool->add_task(RenderTask(_rctx));
+      threadPool->add_task(RenderLineTask(_rctx));
     }
 
     _rctx.range = {(THREAD_COUNT - 1) * facePerThread, model->nfaces()};
-    threadPool->add_task(RenderTask(_rctx));
+    threadPool->add_task(RenderLineTask(_rctx));
 
     threadPool->wait();
   }

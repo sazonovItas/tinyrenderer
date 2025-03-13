@@ -16,7 +16,7 @@ class Camera {
   glm::vec3 center;
 
   float mnRadius = 1.0f;
-  float mxRadius = 100.0f;
+  float mxRadius = 2000.0f;
   glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
 
   void rotateYaw(float dAngle);

@@ -19,7 +19,7 @@ class Model {
   std::vector<glm::vec2> uvs = {};
   std::vector<Index> faces = {};
 
-  void triangulate();
+  void triangulate(std::vector<int> &faceVertCnt);
 
 public:
   Model();

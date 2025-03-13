@@ -1,9 +1,14 @@
 #include "model.h"
+#include "gl.h"
 
+#include <algorithm>
 #include <fstream>
+#include <glm/fwd.hpp>
+#include <glm/geometric.hpp>
 #include <iostream>
 #include <sstream>
 #include <stdexcept>
+#include <vector>
 
 Model::Model() {}
 
@@ -14,6 +19,8 @@ Model::Model(const std::string filename) {
 
   if (in.fail())
     throw std::runtime_error("failed to open file");
+
+  std::vector<int> faceVertCnt;
 
   std::string line;
   while (!in.eof()) {
@@ -52,15 +59,13 @@ Model::Model(const std::string filename) {
         cnt++;
       }
 
-      if (cnt != 3) {
-        throw std::runtime_error("object is not triangulized");
-      }
+      faceVertCnt.push_back(cnt);
     }
   }
 
   in.close();
 
-  triangulate();
+  triangulate(faceVertCnt);
 
   transformed = std::vector<glm::vec4>(verts.size());
   for (int i = 0; i < transformed.size(); i++) {
@@ -68,7 +73,48 @@ Model::Model(const std::string filename) {
   }
 }
 
-void Model::triangulate() {}
+void Model::triangulate(std::vector<int> &faceVertCnt) {
+  std::vector<Index> trianguleatedFaces;
+
+  int offset = 0;
+  for (auto vertCnt : faceVertCnt) {
+    int l = offset, r = offset + vertCnt;
+
+    std::vector<Index> face(faces.begin() + l, faces.begin() + r);
+
+    while (face.size() > 3) {
+      for (int i = 0; i < face.size(); i++) {
+        glm::vec3 v[3] = {
+            verts[face[i].vert],
+            verts[face[(i + 1) % 3].vert],
+            verts[face[(i + 2) % 3].vert],
+        };
+
+        glm::vec3 forward =
+            glm::normalize(glm::cross(v[1] - v[0], v[1] - v[2]));
+        glm::vec3 right = v[1] - v[0];
+        glm::vec3 up = glm::cross(forward, right);
+
+        auto triangleMat = gl::view(forward, right, up);
+
+        bool ok = true;
+
+        if (ok) {
+          trianguleatedFaces.push_back(face[i % 3]);
+          face.erase(face.begin() + i % 3);
+          break;
+        }
+      }
+    }
+
+    for (auto f : face)
+      trianguleatedFaces.push_back(f);
+
+    offset += vertCnt;
+  }
+
+  faces = trianguleatedFaces;
+}
 
 int Model::nverts() const { return verts.size(); }
 
