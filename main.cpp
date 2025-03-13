@@ -38,7 +38,7 @@ private:
   MT::ThreadPool *threadPool;
 
   void initThreadPool() {
-#define THREAD_COUNT 8
+#define THREAD_COUNT 12
     threadPool = new MT::ThreadPool(THREAD_COUNT);
   }
 
@@ -161,12 +161,10 @@ private:
             model->transformed[model->vertIdx(iface, 1)],
             model->transformed[model->vertIdx(iface, 2)],
         };
-        v[0].x /= v[0].w, v[0].y /= v[0].w, v[0].z /= v[0].w,
-            v[0].w /= abs(v[0].w);
-        v[1].x /= v[1].w, v[1].y /= v[1].w, v[1].z /= v[1].w,
-            v[1].w /= abs(v[1].w);
-        v[2].x /= v[2].w, v[2].y /= v[2].w, v[2].z /= v[2].w,
-            v[2].w /= abs(v[2].w);
+
+        for (int i = 0; i < 3; i++)
+          v[i].x /= v[i].w, v[i].y /= v[i].w, v[i].z /= v[i].w,
+              v[i].w /= abs(v[i].w);
 
         for (int i = 0; i < 3; i++) {
           glm::vec4 v1 = v[i], v2 = v[(i + 1) % 3];
@@ -198,6 +196,8 @@ private:
     glm::mat4x4 proj = glm::perspective(90.0f, aspect, 0.1f, 100.0f);
     glm::mat4x4 view = camera.view();
     glm::mat4x4 viewport = gl::viewport(0, 0, image->width, image->height);
+
+    threadPool->pause();
 
     VertexTransformTask::Context _vctx = {
         .model = model,
