@@ -1,0 +1,6 @@
+# clangd building cahce
+.cache
+
+# models and cmake build
+models/
+build/

@@ -1,0 +1,44 @@
+cmake_minimum_required(VERSION 3.10)
+
+project(ACG)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+find_package(SDL2 REQUIRED)
+find_package(glm REQUIRED)
+
+set(SOURCE
+  ${SOURCE}
+  ${CMAKE_CURRENT_SOURCE_DIR}/model.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/image.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/camera.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/gl.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/spinlock.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/thread_pool.cpp
+)
+
+set(HEADERS
+  ${HEADERS}
+)
+
+set(INCLUDE
+  ${INCLUDE}
+  ${SDL2_INCLUDE_DIRS}
+  ${OPENGL_INCLUDE_DIRS}
+  ${GLM_INCLUDE_DIRS}
+)
+
+set(LIBRARIES
+  ${LIBRARIES}
+  ${SDL2_LIBRARIES}
+  ${OPENGL_LIBRARIES}
+  ${GLM_LIBRARIES}
+)
+
+include_directories(${INCLUDE})
+add_executable(${CMAKE_PROJECT_NAME} ${SOURCE})
+target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC ${HEADERS})
+target_link_libraries(${CMAKE_PROJECT_NAME} ${LIBRARIES})
