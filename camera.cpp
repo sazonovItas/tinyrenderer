@@ -61,8 +61,11 @@ void Camera::zoom(float delta) {
   this->radius = std::max(this->radius, this->mnRadius);
 }
 
-glm::mat4x4 Camera::view() {
-  glm::vec3 position(cos(pitch) * sin(yaw) * radius, sin(pitch) * radius,
-                     cos(pitch) * cos(yaw) * radius);
-  return glm::lookAt(position, center, up);
+glm::mat4x4 Camera::view() { return glm::lookAt(position(), center, up); }
+
+glm::vec3 Camera::position() {
+  return glm::vec3(cos(pitch) * sin(yaw) * radius, sin(pitch) * radius,
+                   cos(pitch) * cos(yaw) * radius);
 }
+
+glm::vec3 Camera::eye() { return glm::normalize(center - position()); }

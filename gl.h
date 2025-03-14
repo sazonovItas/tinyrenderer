@@ -1,6 +1,5 @@
 #pragma once
 
-#include <glm/fwd.hpp>
 #ifndef _GL_H_
 #define _GL_H_
 
@@ -9,11 +8,16 @@
 #include <glm/glm.hpp>
 
 namespace gl {
-glm::mat4x4 viewport(const int x, const int y, const int w, const int h);
-
 void line(int x0, int y0, int x1, int y1, Image &image, uint32_t color);
 
-glm::mat4x4 view(glm::vec3 forward, glm::vec3 right, glm::vec3 up);
+void triangle(glm::vec3 *points, Image &image, ZBuffer &buffer, uint32_t color);
+
+void halfSpaceTriangle(glm::vec3 *points, Image &image, ZBuffer &zubffer,
+                       uint32_t color);
+
+void halfSpaceTriangle(int xMin, int yMin, int xMax, int yMax, glm::vec3 *p,
+                       Image &image, ZBuffer &zbuffer, glm::vec3 *normals,
+                       glm::vec3 lightDir);
 }; // namespace gl
 
 #endif

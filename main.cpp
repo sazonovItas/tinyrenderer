@@ -1,5 +1,5 @@
 #include "camera.h"
-#include "gl.h"
+#include "geometry.h"
 #include "image.h"
 #include "model.h"
 #include "render.h"
@@ -15,12 +15,13 @@
 #include <glm/ext.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/fwd.hpp>
+#include <glm/geometric.hpp>
 #include <glm/glm.hpp>
 #include <glm/matrix.hpp>
 #include <iostream>
 #include <stdexcept>
 
-#define MODEL "models/house.obj"
+#define MODEL "models/blank_body.obj"
 
 uint32_t WIDTH = 1920;
 uint32_t HEIGHT = 1080;
@@ -36,9 +37,13 @@ public:
 
 private:
   SDL_Window *window;
+
   MT::ThreadPool *threadPool;
+
   Model *model;
   Image *image;
+  ZBuffer *zbuffer;
+
   Camera camera;
 
   void initThreadPool() {
@@ -65,7 +70,9 @@ private:
   void mainLoop() {
     model = new Model(MODEL);
     image = new Image(WIDTH, HEIGHT);
-    camera = Camera(glm::vec3(0.0, 0.0, 0.0), 10.0f);
+    zbuffer = new ZBuffer(WIDTH, HEIGHT);
+
+    camera = Camera(glm::vec3(0.0, 0.0, 0.0), 15.0f);
 
     bool loop = true;
     while (loop) {
@@ -109,11 +116,16 @@ private:
     auto surface = SDL_GetWindowSurface(window);
 
     image->resize(surface->w, surface->h);
+    zbuffer->resize(surface->w, surface->h);
+
     image->clear(0x00);
+    zbuffer->clear();
 
     render();
 
+    SDL_LockSurface(surface);
     SDL_memcpy4(surface->pixels, image->data(), image->size());
+    SDL_UnlockSurface(surface);
     SDL_UpdateWindowSurface(window);
   }
 
@@ -125,7 +137,7 @@ private:
     float aspect = float(image->width) / float(image->height);
     glm::mat4x4 proj = glm::perspective(FOV, aspect, Z_NEAR, Z_FAR);
     glm::mat4x4 view = camera.view();
-    glm::mat4x4 viewport = gl::viewport(0, 0, image->width, image->height);
+    glm::mat4x4 viewport = geom::viewport(0, 0, image->width, image->height);
 
     threadPool->pause();
 
@@ -148,24 +160,73 @@ private:
 
     threadPool->wait();
 
-    RenderLineTask::Context _rctx = {
+    // RenderLineTask::Context _rctx = {
+    //     .model = model,
+    //     .image = image,
+    //     .zNear = Z_NEAR,
+    //     .zFar = Z_FAR,
+    // };
+    //
+    // int facePerThread = model->nfaces() / THREAD_COUNT;
+    //
+    // for (int i = 0; i < THREAD_COUNT - 1; i++) {
+    //   _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
+    //   threadPool->add_task(RenderLineTask(_rctx));
+    // }
+    //
+    // _rctx.range = {(THREAD_COUNT - 1) * facePerThread, model->nfaces()};
+    // threadPool->add_task(RenderLineTask(_rctx));
+    //
+    // threadPool->wait();
+
+    RenderTriangleTask::Context _rctx = {
         .model = model,
         .image = image,
+        .zbuffer = zbuffer,
         .zNear = Z_NEAR,
         .zFar = Z_FAR,
+        .lightDir = camera.eye(),
     };
 
     int facePerThread = model->nfaces() / THREAD_COUNT;
 
-    for (int i = 0; i < THREAD_COUNT - 1; i++) {
+    for (int i = 0; i < THREAD_COUNT; i++) {
       _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
-      threadPool->add_task(RenderLineTask(_rctx));
+      threadPool->add_task(RenderTriangleTask(_rctx));
+
+      if (i == THREAD_COUNT - 1) {
+        _rctx.range.second = model->nfaces();
+      }
     }
 
-    _rctx.range = {(THREAD_COUNT - 1) * facePerThread, model->nfaces()};
-    threadPool->add_task(RenderLineTask(_rctx));
-
     threadPool->wait();
+
+    // RenderNormalsTask::Context _rctx = {
+    //     .model = model,
+    //     .image = image,
+    //     .zbuffer = zbuffer,
+    //     .zNear = Z_NEAR,
+    //     .zFar = Z_FAR,
+    //     .lightDir = camera.eye(),
+    //     .range = {0, model->nfaces()},
+    // };
+    //
+    // int widthPerThread = image->width / (THREAD_COUNT / 2);
+    // int heightPerThread = image->height / (THREAD_COUNT / 2);
+    //
+    // for (int i = 0; i < THREAD_COUNT / 2; i++) {
+    //   _rctx.yMin = i * heightPerThread;
+    //   _rctx.yMax = (i + 1) * heightPerThread;
+    //   for (int j = 0; j < THREAD_COUNT / 2; j++) {
+    //     _rctx.xMin = j * widthPerThread;
+    //     _rctx.xMax = (j + 1) * widthPerThread;
+    //     threadPool->add_task(RenderNormalsTask(_rctx));
+    //   }
+    // }
+    //
+    // threadPool->add_task(RenderNormalsTask(_rctx));
+    //
+    // threadPool->wait();
   }
 
   void cleanup() {

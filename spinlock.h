@@ -4,13 +4,13 @@
 #define _SPINLOCK_H_
 
 #ifndef SPINLOCK_LOOP_COUNT
-#define SPINLOCK_LOOP_COUNT 2400
+#define SPINLOCK_LOOP_COUNT 24
 #endif
 
 #include <atomic>
 
 class spinlock {
-  std::atomic<bool> locked{false};
+  std::atomic_int counter{0};
 
 public:
   void lock();

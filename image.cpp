@@ -2,6 +2,7 @@
 
 #include <SDL_stdinc.h>
 #include <cstring>
+#include <limits>
 
 Image::Image() {}
 
@@ -20,16 +21,63 @@ void Image::clear(uint32_t color) {
 void Image::resize(int width, int height) {
   this->width = width;
   this->height = height;
-  if (width * height > buffer.size())
-    buffer.resize(width * height);
+  buffer.resize(width * height);
 }
 
 void Image::set(int x, int y, uint32_t color) {
-  if (y >= height || y < 0 || x >= width || x < 0) {
+  if (y >= height || y < 0 || x >= width || x < 0)
     return;
-  }
 
   buffer[width * y + x] = color;
 }
 
 uint32_t *Image::data() { return buffer.data(); }
+
+ZBuffer::ZBuffer() {}
+
+ZBuffer::ZBuffer(int width, int height) {
+  this->width = width;
+  this->height = height;
+  buffer.resize(width * height);
+}
+
+void ZBuffer::clear() {
+  for (int i = buffer.size(); i--;) {
+    buffer[i] = std::numeric_limits<float>::max();
+  }
+}
+
+int ZBuffer::size() { return height * width; }
+
+void ZBuffer::resize(int width, int height) {
+  this->width = width;
+  this->height = height;
+  buffer.resize(width * height);
+}
+
+bool ZBuffer::set(int x, int y, float z) {
+  if (y >= height || y < 0 || x >= width || x < 0)
+    return false;
+
+  bool ok = false;
+
+  int locker = 0;
+  if (x < width / 2 && y < height / 2) {
+    locker = 0;
+  } else if (x >= width / 2 && y < height / 2) {
+    locker = 1;
+  } else if (x < width / 2 && y >= height / 2) {
+    locker = 2;
+  } else if (x >= width / 2 && y >= height / 2) {
+    locker = 3;
+  }
+
+  lock[locker].lock();
+  if (buffer[int(x + y * width)] > z) {
+    buffer[int(x + y * width)] = z;
+    ok = true;
+  }
+  lock[locker].unlock();
+
+  return ok;
+}

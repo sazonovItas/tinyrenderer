@@ -1,5 +1,6 @@
 #include "render.h"
 #include "gl.h"
+#include <glm/geometric.hpp>
 
 VertexTransformTask::VertexTransformTask(Context _ctx) : Task() {
   this->_ctx = _ctx;
@@ -50,6 +51,103 @@ void RenderLineTask::doWork() {
         continue;
 
       gl::line(v1.x, v1.y, v2.x, v2.y, *_ctx.image, 0x00FFFFFF);
+    }
+  }
+}
+
+RenderTriangleTask::RenderTriangleTask(Context _ctx) : Task() {
+  this->_ctx = _ctx;
+}
+
+void RenderTriangleTask::doWork() {
+  Model *model = _ctx.model;
+  std::pair<int, int> range = _ctx.range;
+  float zNear = _ctx.zNear, zFar = _ctx.zFar;
+  glm::vec3 lightDir = _ctx.lightDir;
+
+  for (int iface = range.first; iface < range.second; iface++) {
+    glm::vec4 v[3] = {
+        model->transformedVerts[model->vertIdx(iface, 0)],
+        model->transformedVerts[model->vertIdx(iface, 1)],
+        model->transformedVerts[model->vertIdx(iface, 2)],
+    };
+
+    bool clip = true;
+
+    for (int i = 0; i < 3; i++) {
+      if (v[i].w < 0.0 || v[i].w < 0.0) {
+        clip = false;
+        break;
+      }
+
+      v[i].x /= v[i].w, v[i].y /= v[i].w, v[i].z /= v[i].w, v[i].w /= v[i].w;
+
+      if (v[i].z < zNear || v[i].z > zFar) {
+        clip = false;
+        break;
+      }
+    }
+
+    glm::vec3 norm = glm::normalize(
+        glm::cross((model->vert(iface, 0) - model->vert(iface, 1)),
+                   (model->vert(iface, 2) - model->vert(iface, 0))));
+    float intensity = std::max(0.1f, std::min(1.0f, glm::dot(norm, lightDir)));
+
+    glm::vec3 vs[3] = {v[0], v[1], v[2]};
+    if (clip) {
+      gl::halfSpaceTriangle(vs, *_ctx.image, *_ctx.zbuffer,
+                            (int(intensity * 255) << 16) +
+                                (int(intensity * 255) << 8) +
+                                int(intensity * 255));
+    }
+  }
+}
+
+RenderNormalsTask::RenderNormalsTask(Context _ctx) : Task() {
+  this->_ctx = _ctx;
+}
+
+void RenderNormalsTask::doWork() {
+  Model *model = _ctx.model;
+  std::pair<int, int> range = _ctx.range;
+  float zNear = _ctx.zNear, zFar = _ctx.zFar;
+  glm::vec3 lightDir = _ctx.lightDir;
+  int xMin = _ctx.xMin, yMin = _ctx.yMin, xMax = _ctx.xMax, yMax = _ctx.yMax;
+
+  for (int iface = range.first; iface < range.second; iface++) {
+    glm::vec4 v[3] = {
+        model->transformedVerts[model->vertIdx(iface, 0)],
+        model->transformedVerts[model->vertIdx(iface, 1)],
+        model->transformedVerts[model->vertIdx(iface, 2)],
+    };
+
+    bool clip = true;
+
+    for (int i = 0; i < 3; i++) {
+      if (v[i].w < 0.0 || v[i].w < 0.0) {
+        clip = false;
+        break;
+      }
+
+      v[i].x /= v[i].w, v[i].y /= v[i].w, v[i].z /= v[i].w, v[i].w /= v[i].w;
+
+      if (v[i].z < zNear || v[i].z > zFar) {
+        clip = false;
+        break;
+      }
+    }
+
+    glm::vec3 normals[3] = {
+        glm::normalize(model->norm(iface, 0)),
+        glm::normalize(model->norm(iface, 1)),
+        glm::normalize(model->norm(iface, 2)),
+    };
+
+    glm::vec3 vs[3] = {v[0], v[1], v[2]};
+
+    if (clip) {
+      gl::halfSpaceTriangle(xMin, yMin, xMax, yMax, vs, *_ctx.image,
+                            *_ctx.zbuffer, normals, lightDir);
     }
   }
 }

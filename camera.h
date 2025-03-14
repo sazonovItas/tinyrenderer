@@ -21,6 +21,7 @@ class Camera {
 
   void rotateYaw(float dAngle);
   void rotatePitch(float dAngle);
+  glm::vec3 position();
 
 public:
   Camera();
@@ -36,6 +37,7 @@ public:
   void zoom(float delta);
 
   glm::mat4x4 view();
+  glm::vec3 eye();
 };
 
 #endif

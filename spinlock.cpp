@@ -1,17 +1,15 @@
 #include "spinlock.h"
+#include <atomic>
 
 void spinlock::lock() {
-#define do_nothing
-
-  for (;;) {
-    if (!locked.exchange(true))
-      return;
-
-    for (; locked.load();) {
-      for (volatile int i = 0; i < SPINLOCK_LOOP_COUNT; i += 1)
-        do_nothing;
-    }
+  int locked = 1;
+  int unlocked = 0;
+  while (counter.compare_exchange_strong(locked, unlocked,
+                                         std::memory_order_acq_rel)) {
   }
 }
 
-void spinlock::unlock() { locked.store(false); }
+void spinlock::unlock() {
+  int unlocked = 0;
+  counter.exchange(unlocked, std::memory_order_acq_rel);
+}

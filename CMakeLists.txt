@@ -19,6 +19,7 @@ set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/spinlock.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/thread_pool.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/render.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/geometry.cpp
 )
 
 set(HEADERS

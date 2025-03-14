@@ -1,5 +1,5 @@
 #include "model.h"
-#include "gl.h"
+#include "geometry.h"
 
 #include <fstream>
 #include <glm/fwd.hpp>
@@ -70,6 +70,11 @@ Model::Model(const std::string filename) {
   for (int i = 0; i < transformedVerts.size(); i++) {
     transformedVerts[i] = glm::vec4(verts[i], 1.0);
   }
+
+  transformedNorms = std::vector<glm::vec4>(norms.size());
+  for (int i = 0; i < transformedVerts.size(); i++) {
+    transformedVerts[i] = glm::vec4(verts[i], 1.0);
+  }
 }
 
 void Model::triangulate(std::vector<int> &faceVertCnt) {
@@ -81,6 +86,7 @@ void Model::triangulate(std::vector<int> &faceVertCnt) {
 
     std::vector<Index> face(faces.begin() + l, faces.begin() + r);
     while (face.size() > 3) {
+
       for (int i = 0; i < face.size(); i++) {
         int vCnt = face.size();
         glm::vec3 beforeV[3] = {
@@ -94,18 +100,12 @@ void Model::triangulate(std::vector<int> &faceVertCnt) {
         glm::vec3 right = beforeV[1] - beforeV[0];
         glm::vec3 up = glm::cross(forward, right);
 
-        auto triangleMat = gl::view(forward, right, up);
+        auto triangleMat = geom::view(forward, right, up);
 
-        glm::vec4 afterV[3] = {
+        glm::vec3 v[3] = {
             triangleMat * glm::vec4(beforeV[0], 1.0),
             triangleMat * glm::vec4(beforeV[1], 1.0),
             triangleMat * glm::vec4(beforeV[2], 1.0),
-        };
-
-        glm::vec3 v[3] = {
-            glm::vec3(afterV[0].x, afterV[0].y, afterV[0].z),
-            glm::vec3(afterV[1].x, afterV[1].y, afterV[1].z),
-            glm::vec3(afterV[2].x, afterV[2].y, afterV[2].z),
         };
 
         float angle = glm::cross(v[0] - v[1], v[2] - v[1]).z;
@@ -116,7 +116,14 @@ void Model::triangulate(std::vector<int> &faceVertCnt) {
 
         bool ok = true;
 
-        for (int j = (i + 2) % vCnt; j != i; j = (j + 1) % vCnt) {
+        for (int j = (i + 3) % vCnt; j != i; j = (j + 1) % vCnt) {
+          glm::vec3 vert = triangleMat * glm::vec4(verts[face[j].vert], 1.0);
+
+          auto bc = geom::barycentric(v[0], v[1], v[2], vert);
+          if (bc.x >= 0 && bc.y >= 0 && bc.z >= 0) {
+            ok = false;
+            break;
+          }
         }
 
         if (ok) {
