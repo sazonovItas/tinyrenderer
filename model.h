@@ -30,7 +30,7 @@ public:
 
   int nverts() const;
   int nfaces() const;
-  int nnroms() const;
+  int nnorms() const;
 
   glm::vec3 vert(const int i);
   glm::vec3 norm(const int i);

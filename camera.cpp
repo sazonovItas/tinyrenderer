@@ -1,4 +1,5 @@
 #include "camera.h"
+#include <glm/geometric.hpp>
 
 Camera::Camera() {}
 
@@ -53,6 +54,14 @@ void Camera::rotatePitch(float dAngle) {
 void Camera::rotate(float yawAngle, float pitchAngle) {
   rotateYaw(yawAngle);
   rotatePitch(pitchAngle);
+}
+
+void Camera::move(float deltaX, float deltaY) {
+  center.y += deltaY;
+
+  glm::vec3 right = glm::normalize(glm::cross(eye(), up));
+  center.x += deltaX * right.z;
+  center.z += deltaX * right.x;
 }
 
 void Camera::zoom(float delta) {

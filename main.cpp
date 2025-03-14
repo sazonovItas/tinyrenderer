@@ -12,6 +12,8 @@
 #include <SDL2/SDL_stdinc.h>
 #include <SDL2/SDL_surface.h>
 #include <SDL2/SDL_video.h>
+#include <SDL_keyboard.h>
+#include <SDL_keycode.h>
 #include <glm/ext.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
 #include <glm/fwd.hpp>
@@ -21,7 +23,10 @@
 #include <iostream>
 #include <stdexcept>
 
-#define MODEL "models/dom.obj"
+#define MODEL "models/night-stalker.obj"
+
+#define LIGHT_COUNT 2
+#define CAMERA_RADIUS 10.0f
 
 uint32_t WIDTH = 1920;
 uint32_t HEIGHT = 1080;
@@ -36,7 +41,10 @@ public:
   }
 
 private:
+  enum RenderMode { RenderLines, RenderTriangleSimpleLight, RenderSpecLight };
+
   SDL_Window *window;
+  RenderMode currentRenderMode = RenderLines;
 
   MT::ThreadPool *threadPool;
 
@@ -67,12 +75,24 @@ private:
     }
   }
 
+  std::vector<glm::vec3> lightPositions;
+  std::vector<glm::vec3> lightColors;
+
   void mainLoop() {
     model = new Model(MODEL);
     image = new Image(WIDTH, HEIGHT);
     zbuffer = new ZBuffer(WIDTH, HEIGHT);
 
-    camera = Camera(glm::vec3(0.0, 0.0, 0.0), 15.0f);
+    camera = Camera(glm::vec3(0.0, 0.0, 0.0), CAMERA_RADIUS);
+
+    lightPositions.resize(3);
+    lightPositions[1] = {2.0, 2.0, 0.0};
+    lightPositions[2] = {-2.0, 2.0, 0.0};
+
+    lightColors.resize(3);
+    lightColors[0] = {0.8, 0.8, 0.8};
+    lightColors[1] = {0.5, 0.0, 0.0};
+    lightColors[2] = {0.0, 0.5, 0.0};
 
     bool loop = true;
     while (loop) {
@@ -95,9 +115,30 @@ private:
 
         if (event.type == SDL_MOUSEMOTION &&
             event.button.button == SDL_BUTTON(SDL_BUTTON_LEFT)) {
-          camera.rotate(
-              glm::radians(-event.motion.x * event.motion.xrel * 0.0003f),
-              glm::radians(event.motion.y * event.motion.yrel * 0.0003f));
+          if (SDL_GetModState() & KMOD_LSHIFT) {
+            camera.move(-event.motion.x * event.motion.xrel * 0.0003f,
+                        event.motion.y * event.motion.yrel * 0.0003f);
+          } else {
+            camera.rotate(
+                glm::radians(-event.motion.x * event.motion.xrel * 0.0003f),
+                glm::radians(event.motion.y * event.motion.yrel * 0.0003f));
+          }
+          rerender = true;
+        }
+
+        if (event.type == SDL_KEYDOWN) {
+          switch (event.key.keysym.sym) {
+          case SDLK_1:
+            currentRenderMode = RenderLines;
+            break;
+          case SDLK_2:
+            currentRenderMode = RenderTriangleSimpleLight;
+            break;
+          case SDLK_3:
+            currentRenderMode = RenderSpecLight;
+            break;
+          }
+
           rerender = true;
         }
 
@@ -148,60 +189,89 @@ private:
         .viewport = viewport,
     };
 
-    int vertPerThread = model->nverts() / THREAD_COUNT;
+    int vertsPerThread = model->nverts() / THREAD_COUNT;
+    int normsPerThread = model->nnorms() / THREAD_COUNT;
 
-    for (int i = 0; i < THREAD_COUNT - 1; i++) {
-      _vctx.range = {i * vertPerThread, (i + 1) * vertPerThread};
+    for (int i = 0; i < THREAD_COUNT; i++) {
+      _vctx.range = {i * vertsPerThread, (i + 1) * vertsPerThread};
+      _vctx.rangeNorms = {i * normsPerThread, (i + 1) * normsPerThread};
       threadPool->add_task(VertexTransformTask(_vctx));
-    }
 
-    _vctx.range = {(THREAD_COUNT - 1) * vertPerThread, model->nverts()};
-    threadPool->add_task(VertexTransformTask(_vctx));
+      if (i == THREAD_COUNT - 1) {
+        _vctx.range = {i * vertsPerThread, model->nverts()};
+        _vctx.rangeNorms = {i * normsPerThread, model->nnorms()};
+        threadPool->add_task(VertexTransformTask(_vctx));
+      }
+    }
 
     threadPool->wait();
 
-    // RenderLineTask::Context _rctx = {
-    //     .model = model,
-    //     .image = image,
-    //     .zNear = Z_NEAR,
-    //     .zFar = Z_FAR,
-    // };
-    //
-    // int facePerThread = model->nfaces() / THREAD_COUNT;
-    //
-    // for (int i = 0; i < THREAD_COUNT - 1; i++) {
-    //   _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
-    //   threadPool->add_task(RenderLineTask(_rctx));
-    // }
-    //
-    // _rctx.range = {(THREAD_COUNT - 1) * facePerThread, model->nfaces()};
-    // threadPool->add_task(RenderLineTask(_rctx));
-    //
-    // threadPool->wait();
+    switch (currentRenderMode) {
+    case RenderLines:
+      renderLines();
+      break;
+    case RenderTriangleSimpleLight:
+      renderTriangleSimpleLight();
+      break;
+    case RenderSpecLight:
+      renderSpecLight();
+      break;
+    }
+  }
 
-    // RenderTriangleTask::Context _rctx = {
-    //     .model = model,
-    //     .image = image,
-    //     .zbuffer = zbuffer,
-    //     .zNear = Z_NEAR,
-    //     .zFar = Z_FAR,
-    //     .lightDir = camera.eye(),
-    // };
-    //
-    // int facePerThread = model->nfaces() / THREAD_COUNT;
-    //
-    // for (int i = 0; i < THREAD_COUNT; i++) {
-    //   _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
-    //   threadPool->add_task(RenderTriangleTask(_rctx));
-    //
-    //   if (i == THREAD_COUNT - 1) {
-    //     _rctx.range.second = model->nfaces();
-    //   }
-    // }
-    //
-    // threadPool->wait();
+  void renderLines() {
+    RenderLineTask::Context _rctx = {
+        .model = model,
+        .image = image,
+        .zNear = Z_NEAR,
+        .zFar = Z_FAR,
+    };
 
-    RenderNormalsTask::Context _rctx = {
+    int facePerThread = model->nfaces() / THREAD_COUNT;
+
+    for (int i = 0; i < THREAD_COUNT; i++) {
+      _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
+      threadPool->add_task(RenderLineTask(_rctx));
+
+      if (i == THREAD_COUNT - 1) {
+        _rctx.range = {(THREAD_COUNT - 1) * facePerThread, model->nfaces()};
+        threadPool->add_task(RenderLineTask(_rctx));
+      }
+    }
+
+    threadPool->wait();
+  }
+
+  void renderTriangleSimpleLight() {
+    lightPositions[0] = camera.position();
+
+    RenderTriangleTask::Context _rctx = {
+        .model = model,
+        .image = image,
+        .zbuffer = zbuffer,
+        .zNear = Z_NEAR,
+        .zFar = Z_FAR,
+        .lightCnt = LIGHT_COUNT + 1,
+        .lightColors = lightColors,
+        .lightPositions = lightPositions,
+    };
+
+    int facePerThread = model->nfaces() / THREAD_COUNT;
+
+    for (int i = 0; i < THREAD_COUNT; i++) {
+      _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
+      threadPool->add_task(RenderTriangleTask(_rctx));
+
+      if (i == THREAD_COUNT - 1) {
+        _rctx.range.second = model->nfaces();
+      }
+    }
+
+    threadPool->wait();
+  }
+
+  void renderSpecLight() {
+    RenderSpecTask::Context _rctx = {
         .model = model,
         .image = image,
         .zbuffer = zbuffer,
@@ -214,7 +284,7 @@ private:
 
     for (int i = 0; i < THREAD_COUNT; i++) {
       _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
-      threadPool->add_task(RenderNormalsTask(_rctx));
+      threadPool->add_task(RenderSpecTask(_rctx));
 
       if (i == THREAD_COUNT - 1) {
         _rctx.range.second = model->nfaces();

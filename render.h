@@ -19,6 +19,7 @@ public:
     glm::mat4x4 proj, view, viewport;
 
     std::pair<int, int> range;
+    std::pair<int, int> rangeNorms;
   };
 
   VertexTransformTask(Context _ctx);
@@ -57,7 +58,9 @@ public:
 
     float zNear, zFar;
 
-    glm::vec3 lightDir;
+    int lightCnt = 0;
+    std::vector<glm::vec3> lightColors;
+    std::vector<glm::vec3> lightPositions;
 
     std::pair<int, int> range;
   };
@@ -70,7 +73,7 @@ private:
   Context _ctx;
 };
 
-class RenderNormalsTask : public MT::Task {
+class RenderSpecTask : public MT::Task {
 public:
   struct Context {
     Model *model;
@@ -84,7 +87,7 @@ public:
     std::pair<int, int> range;
   };
 
-  RenderNormalsTask(Context _ctx);
+  RenderSpecTask(Context _ctx);
 
   void doWork() override;
 

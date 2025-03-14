@@ -72,8 +72,8 @@ Model::Model(const std::string filename) {
   }
 
   transformedNorms = std::vector<glm::vec4>(norms.size());
-  for (int i = 0; i < transformedVerts.size(); i++) {
-    transformedVerts[i] = glm::vec4(verts[i], 1.0);
+  for (int i = 0; i < transformedNorms.size(); i++) {
+    transformedNorms[i] = glm::vec4(norms[i], 0.0);
   }
 }
 
@@ -147,7 +147,7 @@ void Model::triangulate(std::vector<int> &faceVertCnt) {
 
 int Model::nverts() const { return verts.size(); }
 
-int Model::nnroms() const { return norms.size(); }
+int Model::nnorms() const { return norms.size(); }
 
 int Model::nfaces() const { return faces.size() / 3; }
 

@@ -9,11 +9,17 @@ VertexTransformTask::VertexTransformTask(Context _ctx) : Task() {
 void VertexTransformTask::doWork() {
   Model *model = _ctx.model;
   std::pair<int, int> range = _ctx.range;
+  std::pair<int, int> rangeNorms = _ctx.rangeNorms;
 
   for (int i = range.first; i < range.second; i++) {
     model->transformedVerts[i] = _ctx.viewport * _ctx.proj * _ctx.view *
                                  _ctx.transform *
                                  glm::vec4(model->vert(i), 1.0);
+  }
+
+  for (int i = rangeNorms.first; i < rangeNorms.second; i++) {
+    model->transformedNorms[i] =
+        _ctx.transform * glm::vec4(model->norm(i), 0.0);
   }
 }
 
@@ -63,7 +69,6 @@ void RenderTriangleTask::doWork() {
   Model *model = _ctx.model;
   std::pair<int, int> range = _ctx.range;
   float zNear = _ctx.zNear, zFar = _ctx.zFar;
-  glm::vec3 lightDir = _ctx.lightDir;
 
   for (int iface = range.first; iface < range.second; iface++) {
     glm::vec4 v[3] = {
@@ -91,23 +96,39 @@ void RenderTriangleTask::doWork() {
     glm::vec3 norm = glm::normalize(
         glm::cross((model->vert(iface, 0) - model->vert(iface, 1)),
                    (model->vert(iface, 2) - model->vert(iface, 0))));
-    float intensity = std::max(0.1f, std::min(1.0f, glm::dot(norm, lightDir)));
 
+    glm::vec3 intensity(0.1, 0.1, 0.1);
+    glm::vec3 worldV[3] = {model->vert(iface, 0), model->vert(iface, 1),
+                           model->vert(iface, 2)};
     glm::vec3 vs[3] = {v[0], v[1], v[2]};
+    glm::vec3 faceCenter = (worldV[0] + worldV[1] + worldV[2]) / 3.0f;
+
+    for (int i = 0; i < _ctx.lightCnt; i++) {
+      glm::vec3 lightDir = glm::normalize(faceCenter - _ctx.lightPositions[i]);
+      float lightIntensity =
+          std::max(0.0f, std::min(1.0f, glm::dot(norm, lightDir)));
+      intensity += lightIntensity * _ctx.lightColors[i];
+    }
+
+    float maxIntensity =
+        std::max(intensity[0], std::max(intensity[1], intensity[2]));
+
+    if (maxIntensity > 1.0) {
+      intensity /= maxIntensity;
+    }
+
     if (clip) {
       gl::halfSpaceTriangle(vs, *_ctx.image, *_ctx.zbuffer,
-                            (int(intensity * 255) << 16) +
-                                (int(intensity * 255) << 8) +
-                                int(intensity * 255));
+                            (int(intensity[0] * 255) << 16) +
+                                (int(intensity[1] * 255) << 8) +
+                                int(intensity[2] * 255));
     }
   }
 }
 
-RenderNormalsTask::RenderNormalsTask(Context _ctx) : Task() {
-  this->_ctx = _ctx;
-}
+RenderSpecTask::RenderSpecTask(Context _ctx) : Task() { this->_ctx = _ctx; }
 
-void RenderNormalsTask::doWork() {
+void RenderSpecTask::doWork() {
   Model *model = _ctx.model;
   std::pair<int, int> range = _ctx.range;
   float zNear = _ctx.zNear, zFar = _ctx.zFar;
