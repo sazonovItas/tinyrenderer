@@ -129,17 +129,16 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
   }
 }
 
-void gl::halfSpaceTriangle(int xMin, int yMin, int xMax, int yMax, glm::vec3 *p,
-                           Image &image, ZBuffer &zbuffer, glm::vec3 *normals,
-                           glm::vec3 lightDir) {
-  xMin = std::max(xMin,
-                  (int)std::ceil(std::min(p[0].x, std::min(p[1].x, p[2].x))));
-  yMin = std::max(yMin,
-                  (int)std::ceil(std::min(p[0].y, std::min(p[1].y, p[2].y))));
-  xMax = std::min(xMax,
-                  (int)std::ceil(std::max(p[0].x, std::max(p[1].x, p[2].x))));
-  yMax = std::min(yMax,
-                  (int)std::ceil(std::max(p[0].y, std::max(p[1].y, p[2].y))));
+void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
+                           glm::vec3 *normals, glm::vec3 lightDir) {
+  int xMin =
+      std::max(0, (int)std::ceil(std::min(p[0].x, std::min(p[1].x, p[2].x))));
+  int yMin =
+      std::max(0, (int)std::ceil(std::min(p[0].y, std::min(p[1].y, p[2].y))));
+  int xMax = std::min(
+      image.width, (int)std::ceil(std::max(p[0].x, std::max(p[1].x, p[2].x))));
+  int yMax = std::min(
+      image.height, (int)std::ceil(std::max(p[0].y, std::max(p[1].y, p[2].y))));
 
   glm::vec2 p1p2 = p[1] - p[0];
   glm::vec2 p2p3 = p[2] - p[1];
@@ -180,8 +179,7 @@ void gl::halfSpaceTriangle(int xMin, int yMin, int xMax, int yMax, glm::vec3 *p,
           (b.y == 0 && f2) || (b.z == 0 && f3)) {
         float z = b.x * p[0].z + b.y * p[1].z + p[2].z * b.z;
 
-        glm::vec3 norm = glm::normalize(b.x * normals[0] + b.y * normals[1] +
-                                        b.z * normals[2]);
+        glm::vec3 norm = b.x * normals[0] + b.y * normals[1] + b.z * normals[2];
         float intensity =
             std::max(0.1f, std::min(1.0f, glm::dot(norm, -lightDir)));
 

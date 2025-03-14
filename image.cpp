@@ -39,6 +39,7 @@ ZBuffer::ZBuffer(int width, int height) {
   this->width = width;
   this->height = height;
   buffer.resize(width * height);
+  locks.resize(width * height);
 }
 
 void ZBuffer::clear() {
@@ -53,6 +54,7 @@ void ZBuffer::resize(int width, int height) {
   this->width = width;
   this->height = height;
   buffer.resize(width * height);
+  locks.resize(width * height);
 }
 
 bool ZBuffer::set(int x, int y, float z) {
@@ -61,23 +63,12 @@ bool ZBuffer::set(int x, int y, float z) {
 
   bool ok = false;
 
-  int locker = 0;
-  if (x < width / 2 && y < height / 2) {
-    locker = 0;
-  } else if (x >= width / 2 && y < height / 2) {
-    locker = 1;
-  } else if (x < width / 2 && y >= height / 2) {
-    locker = 2;
-  } else if (x >= width / 2 && y >= height / 2) {
-    locker = 3;
-  }
-
-  lock[locker].lock();
+  locks[x + y * width].lock();
   if (buffer[int(x + y * width)] > z) {
     buffer[int(x + y * width)] = z;
     ok = true;
   }
-  lock[locker].unlock();
+  locks[x + y * width].unlock();
 
   return ok;
 }

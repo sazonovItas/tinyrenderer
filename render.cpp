@@ -112,7 +112,6 @@ void RenderNormalsTask::doWork() {
   std::pair<int, int> range = _ctx.range;
   float zNear = _ctx.zNear, zFar = _ctx.zFar;
   glm::vec3 lightDir = _ctx.lightDir;
-  int xMin = _ctx.xMin, yMin = _ctx.yMin, xMax = _ctx.xMax, yMax = _ctx.yMax;
 
   for (int iface = range.first; iface < range.second; iface++) {
     glm::vec4 v[3] = {
@@ -146,8 +145,7 @@ void RenderNormalsTask::doWork() {
     glm::vec3 vs[3] = {v[0], v[1], v[2]};
 
     if (clip) {
-      gl::halfSpaceTriangle(xMin, yMin, xMax, yMax, vs, *_ctx.image,
-                            *_ctx.zbuffer, normals, lightDir);
+      gl::halfSpaceTriangle(vs, *_ctx.image, *_ctx.zbuffer, normals, lightDir);
     }
   }
 }

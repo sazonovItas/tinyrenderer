@@ -21,7 +21,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#define MODEL "models/blank_body.obj"
+#define MODEL "models/dom.obj"
 
 uint32_t WIDTH = 1920;
 uint32_t HEIGHT = 1080;
@@ -47,7 +47,7 @@ private:
   Camera camera;
 
   void initThreadPool() {
-#define THREAD_COUNT 12
+#define THREAD_COUNT 16
     threadPool = new MT::ThreadPool(THREAD_COUNT);
   }
 
@@ -132,7 +132,7 @@ private:
   void render() {
 #define Z_NEAR 0.1f
 #define Z_FAR 100.0f
-#define FOV 120.0f
+#define FOV 90.0f
 
     float aspect = float(image->width) / float(image->height);
     glm::mat4x4 proj = glm::perspective(FOV, aspect, Z_NEAR, Z_FAR);
@@ -179,7 +179,29 @@ private:
     //
     // threadPool->wait();
 
-    RenderTriangleTask::Context _rctx = {
+    // RenderTriangleTask::Context _rctx = {
+    //     .model = model,
+    //     .image = image,
+    //     .zbuffer = zbuffer,
+    //     .zNear = Z_NEAR,
+    //     .zFar = Z_FAR,
+    //     .lightDir = camera.eye(),
+    // };
+    //
+    // int facePerThread = model->nfaces() / THREAD_COUNT;
+    //
+    // for (int i = 0; i < THREAD_COUNT; i++) {
+    //   _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
+    //   threadPool->add_task(RenderTriangleTask(_rctx));
+    //
+    //   if (i == THREAD_COUNT - 1) {
+    //     _rctx.range.second = model->nfaces();
+    //   }
+    // }
+    //
+    // threadPool->wait();
+
+    RenderNormalsTask::Context _rctx = {
         .model = model,
         .image = image,
         .zbuffer = zbuffer,
@@ -192,7 +214,7 @@ private:
 
     for (int i = 0; i < THREAD_COUNT; i++) {
       _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
-      threadPool->add_task(RenderTriangleTask(_rctx));
+      threadPool->add_task(RenderNormalsTask(_rctx));
 
       if (i == THREAD_COUNT - 1) {
         _rctx.range.second = model->nfaces();
@@ -200,33 +222,6 @@ private:
     }
 
     threadPool->wait();
-
-    // RenderNormalsTask::Context _rctx = {
-    //     .model = model,
-    //     .image = image,
-    //     .zbuffer = zbuffer,
-    //     .zNear = Z_NEAR,
-    //     .zFar = Z_FAR,
-    //     .lightDir = camera.eye(),
-    //     .range = {0, model->nfaces()},
-    // };
-    //
-    // int widthPerThread = image->width / (THREAD_COUNT / 2);
-    // int heightPerThread = image->height / (THREAD_COUNT / 2);
-    //
-    // for (int i = 0; i < THREAD_COUNT / 2; i++) {
-    //   _rctx.yMin = i * heightPerThread;
-    //   _rctx.yMax = (i + 1) * heightPerThread;
-    //   for (int j = 0; j < THREAD_COUNT / 2; j++) {
-    //     _rctx.xMin = j * widthPerThread;
-    //     _rctx.xMax = (j + 1) * widthPerThread;
-    //     threadPool->add_task(RenderNormalsTask(_rctx));
-    //   }
-    // }
-    //
-    // threadPool->add_task(RenderNormalsTask(_rctx));
-    //
-    // threadPool->wait();
   }
 
   void cleanup() {

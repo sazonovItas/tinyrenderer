@@ -78,7 +78,6 @@ public:
     ZBuffer *zbuffer;
 
     float zNear, zFar;
-    int xMin, yMin, xMax, yMax;
 
     glm::vec3 lightDir;
 

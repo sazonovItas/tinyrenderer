@@ -27,7 +27,7 @@ public:
 
 class ZBuffer {
   std::vector<float> buffer;
-  spinlock lock[4];
+  std::vector<spinlock> locks;
 
 public:
   int width;
