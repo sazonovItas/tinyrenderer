@@ -94,31 +94,32 @@ void RenderTriangleTask::doWork() {
       }
     }
 
-    glm::vec3 norm = glm::normalize(
-        glm::cross((model->vert(iface, 0) - model->vert(iface, 1)),
-                   (model->vert(iface, 2) - model->vert(iface, 0))));
-
-    glm::vec3 intensity(0.1, 0.1, 0.1);
-    glm::vec3 worldV[3] = {model->vert(iface, 0), model->vert(iface, 1),
-                           model->vert(iface, 2)};
-    glm::vec3 vs[3] = {v[0], v[1], v[2]};
-    glm::vec3 faceCenter = (worldV[0] + worldV[1] + worldV[2]) / 3.0f;
-
-    for (int i = 0; i < _ctx.lightCnt; i++) {
-      glm::vec3 lightDir = glm::normalize(faceCenter - _ctx.lightPositions[i]);
-      float lightIntensity =
-          std::max(0.0f, std::min(1.0f, glm::dot(norm, lightDir)));
-      intensity += lightIntensity * _ctx.lightColors[i];
-    }
-
-    float maxIntensity =
-        std::max(intensity[0], std::max(intensity[1], intensity[2]));
-
-    if (maxIntensity > 1.0) {
-      intensity /= maxIntensity;
-    }
-
     if (clip) {
+      glm::vec3 norm = glm::normalize(
+          glm::cross((model->vert(iface, 0) - model->vert(iface, 1)),
+                     (model->vert(iface, 2) - model->vert(iface, 0))));
+
+      glm::vec3 intensity(0.1, 0.1, 0.1);
+      glm::vec3 worldV[3] = {model->vert(iface, 0), model->vert(iface, 1),
+                             model->vert(iface, 2)};
+      glm::vec3 vs[3] = {v[0], v[1], v[2]};
+      glm::vec3 faceCenter = (worldV[0] + worldV[1] + worldV[2]) / 3.0f;
+
+      for (int i = 0; i < _ctx.lightCnt; i++) {
+        glm::vec3 lightDir =
+            glm::normalize(faceCenter - _ctx.lightPositions[i]);
+        float lightIntensity =
+            std::max(0.0f, std::min(1.0f, glm::dot(norm, lightDir)));
+        intensity += lightIntensity * _ctx.lightColors[i];
+      }
+
+      float maxIntensity =
+          std::max(intensity[0], std::max(intensity[1], intensity[2]));
+
+      if (maxIntensity > 1.0) {
+        intensity /= maxIntensity;
+      }
+
       gl::halfSpaceTriangle(vs, *_ctx.image, *_ctx.zbuffer,
                             (int(intensity[0] * 255) << 16) +
                                 (int(intensity[1] * 255) << 8) +
@@ -157,21 +158,21 @@ void RenderSpecTask::doWork() {
       }
     }
 
-    glm::vec3 normals[3] = {
-        glm::normalize(model->norm(iface, 0)),
-        glm::normalize(model->norm(iface, 1)),
-        glm::normalize(model->norm(iface, 2)),
-    };
-
-    glm::vec3 worldV[3] = {
-        model->vert(iface, 0),
-        model->vert(iface, 1),
-        model->vert(iface, 2),
-    };
-
-    glm::vec3 vs[3] = {v[0], v[1], v[2]};
-
     if (clip) {
+      glm::vec3 normals[3] = {
+          glm::normalize(model->norm(iface, 0)),
+          glm::normalize(model->norm(iface, 1)),
+          glm::normalize(model->norm(iface, 2)),
+      };
+
+      glm::vec3 worldV[3] = {
+          model->vert(iface, 0),
+          model->vert(iface, 1),
+          model->vert(iface, 2),
+      };
+
+      glm::vec3 vs[3] = {v[0], v[1], v[2]};
+
       gl::halfSpaceTriangle(vs, *_ctx.image, *_ctx.zbuffer, worldV, normals,
                             _ctx.lightPos, _ctx.lightColor, _ctx.viewPos,
                             _ctx.ambient, _ctx.diffuse, _ctx.specular,

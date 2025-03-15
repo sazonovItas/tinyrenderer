@@ -186,13 +186,13 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
         glm::vec3 fragNorm = glm::normalize(
             b.x * normals[0] + b.y * normals[1] + b.z * normals[2]);
         glm::vec3 lightDir = glm::normalize(fragPos - lightPos);
+        glm::vec3 viewDir = glm::normalize(viewPos - fragPos);
 
         glm::vec3 ambientColor = lightColor * ambient;
 
         float diff = std::max(0.0f, glm::dot(fragNorm, lightDir));
         glm::vec3 diffuseColor = lightColor * (diff * diffuse);
 
-        glm::vec3 viewDir = glm::normalize(viewPos - fragPos);
         glm::vec3 reflectDir = glm::reflect(lightDir, fragNorm);
         float spec =
             pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), shininess);

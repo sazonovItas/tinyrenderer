@@ -90,7 +90,7 @@ private:
     lightPositions[2] = {-2.0, 2.0, 0.0};
 
     lightColors.resize(3);
-    lightColors[0] = {0.8, 0.8, 0.8};
+    lightColors[0] = {1.0, 1.0, 1.0};
     lightColors[1] = {0.5, 0.0, 0.0};
     lightColors[2] = {0.0, 0.5, 0.0};
 
@@ -159,7 +159,7 @@ private:
     image->resize(surface->w, surface->h);
     zbuffer->resize(surface->w, surface->h);
 
-    image->clear(0x00);
+    image->clear(0x00222222);
     zbuffer->clear();
 
     render();
@@ -283,10 +283,28 @@ private:
         .viewPos = camera.position(),
 
         // Bronze
-        .ambient = glm::vec3(0.2125, 0.1275, 0.054),
-        .diffuse = glm::vec3(0.714, 0.4284, 0.18144),
-        .specular = glm::vec3(0.393548, 0.271906, 0.166721),
-        .shininess = 25.6,
+        // .ambient = glm::vec3(0.2121, 0.1275, 0.054),
+        // .diffuse = glm::vec3(0.714, 0.4284, 0.18144),
+        // .specular = glm::vec3(0.393548, 0.271906, 0.166721),
+        // .shininess = 25.6,
+
+        // Polished bronze
+        // .ambient = glm::vec3(0.25, 0.148, 0.06475),
+        // .diffuse = glm::vec3(0.4, 0.2368, 0.1036),
+        // .specular = glm::vec3(0.7746, 0.4586, 0.200621),
+        // .shininess = 76.8,
+
+        // Polished silver
+        // .ambient = glm::vec3(0.2313, 0.2313, 0.2313),
+        // .diffuse = glm::vec3(0.4775, 0.4775, 0.4775),
+        // .specular = glm::vec3(0.7739, 0.7739, 0.7739),
+        // .shininess = 89.6,
+
+        // Ruby
+        .ambient = glm::vec3(0.1745, 0.01175, 0.01175),
+        .diffuse = glm::vec3(0.61424, 0.04136, 0.04136),
+        .specular = glm::vec3(0.727811, 0.626959, 0.626959),
+        .shininess = 76.8,
     };
 
     int facePerThread = model->nfaces() / THREAD_COUNT;

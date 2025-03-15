@@ -58,9 +58,6 @@ void ZBuffer::resize(int width, int height) {
 }
 
 bool ZBuffer::set(int x, int y, float z) {
-  if (y >= height || y < 0 || x >= width || x < 0)
-    return false;
-
   bool ok = false;
 
   locks[x + y * width].lock();
