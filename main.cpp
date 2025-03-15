@@ -23,7 +23,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#define MODEL "models/blank_body.obj"
+#define MODEL "models/house.obj"
 
 #define LIGHT_COUNT 2
 #define CAMERA_RADIUS 10.0f
@@ -195,13 +195,13 @@ private:
     for (int i = 0; i < THREAD_COUNT; i++) {
       _vctx.range = {i * vertsPerThread, (i + 1) * vertsPerThread};
       _vctx.rangeNorms = {i * normsPerThread, (i + 1) * normsPerThread};
-      threadPool->add_task(VertexTransformTask(_vctx));
 
       if (i == THREAD_COUNT - 1) {
         _vctx.range = {i * vertsPerThread, model->nverts()};
         _vctx.rangeNorms = {i * normsPerThread, model->nnorms()};
-        threadPool->add_task(VertexTransformTask(_vctx));
       }
+
+      threadPool->add_task(VertexTransformTask(_vctx));
     }
 
     threadPool->wait();
@@ -214,7 +214,7 @@ private:
       renderTriangleSimpleLight();
       break;
     case RenderSpecLight:
-      renderSpecLight();
+      renderPhongLight();
       break;
     }
   }
@@ -231,12 +231,11 @@ private:
 
     for (int i = 0; i < THREAD_COUNT; i++) {
       _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
-      threadPool->add_task(RenderLineTask(_rctx));
-
       if (i == THREAD_COUNT - 1) {
         _rctx.range = {(THREAD_COUNT - 1) * facePerThread, model->nfaces()};
-        threadPool->add_task(RenderLineTask(_rctx));
       }
+
+      threadPool->add_task(RenderLineTask(_rctx));
     }
 
     threadPool->wait();
@@ -254,23 +253,24 @@ private:
         .lightCnt = LIGHT_COUNT + 1,
         .lightColors = lightColors,
         .lightPositions = lightPositions,
+        .viewPos = camera.position(),
     };
 
     int facePerThread = model->nfaces() / THREAD_COUNT;
 
     for (int i = 0; i < THREAD_COUNT; i++) {
       _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
-      threadPool->add_task(RenderTriangleTask(_rctx));
-
       if (i == THREAD_COUNT - 1) {
         _rctx.range.second = model->nfaces();
       }
+
+      threadPool->add_task(RenderTriangleTask(_rctx));
     }
 
     threadPool->wait();
   }
 
-  void renderSpecLight() {
+  void renderPhongLight() {
     RenderSpecTask::Context _rctx = {
         .model = model,
         .image = image,
@@ -311,11 +311,11 @@ private:
 
     for (int i = 0; i < THREAD_COUNT; i++) {
       _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
-      threadPool->add_task(RenderSpecTask(_rctx));
-
       if (i == THREAD_COUNT - 1) {
         _rctx.range.second = model->nfaces();
       }
+
+      threadPool->add_task(RenderSpecTask(_rctx));
     }
 
     threadPool->wait();

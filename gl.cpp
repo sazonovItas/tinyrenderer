@@ -185,7 +185,7 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
         glm::vec3 fragPos = wP[0] * b.x + wP[1] * b.y + wP[2] * b.z;
         glm::vec3 fragNorm = glm::normalize(
             b.x * normals[0] + b.y * normals[1] + b.z * normals[2]);
-        glm::vec3 lightDir = glm::normalize(fragPos - lightPos);
+        glm::vec3 lightDir = -glm::normalize(fragPos - lightPos);
         glm::vec3 viewDir = glm::normalize(viewPos - fragPos);
 
         glm::vec3 ambientColor = lightColor * ambient;
@@ -193,7 +193,7 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
         float diff = std::max(0.0f, glm::dot(fragNorm, lightDir));
         glm::vec3 diffuseColor = lightColor * (diff * diffuse);
 
-        glm::vec3 reflectDir = glm::reflect(lightDir, fragNorm);
+        glm::vec3 reflectDir = glm::reflect(-lightDir, fragNorm);
         float spec =
             pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), shininess);
         glm::vec3 specularColor = lightColor * (spec * specular);
@@ -202,9 +202,9 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
 
         if (zbuffer.set(x, y, z)) {
           image.set(x, y,
-                    (int(intensity[0] * 255) << 16) +
-                        (int(intensity[1] * 255) << 8) +
-                        int(intensity[2] * 255));
+                    (std::min(int(intensity[0] * 255), 255) << 16) +
+                        (std::min(int(intensity[1] * 255), 255) << 8) +
+                        std::min(int(intensity[2] * 255), 255));
         }
       }
     }

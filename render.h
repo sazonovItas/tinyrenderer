@@ -61,6 +61,7 @@ public:
     int lightCnt = 0;
     std::vector<glm::vec3> lightColors;
     std::vector<glm::vec3> lightPositions;
+    glm::vec3 viewPos;
 
     std::pair<int, int> range;
   };

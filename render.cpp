@@ -99,11 +99,20 @@ void RenderTriangleTask::doWork() {
           glm::cross((model->vert(iface, 0) - model->vert(iface, 1)),
                      (model->vert(iface, 2) - model->vert(iface, 0))));
 
-      glm::vec3 intensity(0.1, 0.1, 0.1);
-      glm::vec3 worldV[3] = {model->vert(iface, 0), model->vert(iface, 1),
-                             model->vert(iface, 2)};
-      glm::vec3 vs[3] = {v[0], v[1], v[2]};
+      glm::vec3 worldV[3] = {
+          model->vert(iface, 0),
+          model->vert(iface, 1),
+          model->vert(iface, 2),
+      };
       glm::vec3 faceCenter = (worldV[0] + worldV[1] + worldV[2]) / 3.0f;
+      glm::vec3 viewDir = glm::normalize(faceCenter - _ctx.viewPos);
+
+      if (glm::dot(viewDir, norm) < 0) {
+        continue;
+      }
+
+      glm::vec3 intensity(0.1, 0.1, 0.1);
+      glm::vec3 vs[3] = {v[0], v[1], v[2]};
 
       for (int i = 0; i < _ctx.lightCnt; i++) {
         glm::vec3 lightDir =
@@ -170,6 +179,14 @@ void RenderSpecTask::doWork() {
           model->vert(iface, 1),
           model->vert(iface, 2),
       };
+      glm::vec3 norm = glm::normalize(
+          glm::cross((worldV[0] - worldV[1]), (worldV[2] - worldV[1])));
+      glm::vec3 faceCenter = (worldV[0] + worldV[1] + worldV[2]) / 3.0f;
+      glm::vec3 viewDir = glm::normalize(faceCenter - _ctx.viewPos);
+
+      if (glm::dot(viewDir, norm) < 0) {
+        continue;
+      }
 
       glm::vec3 vs[3] = {v[0], v[1], v[2]};
 
