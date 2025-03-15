@@ -21,6 +21,7 @@ set(SOURCE
   ${CMAKE_CURRENT_SOURCE_DIR}/render.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/geometry.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/shader.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/color.cpp
 )
 
 set(HEADERS

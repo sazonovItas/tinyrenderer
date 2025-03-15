@@ -185,7 +185,6 @@ void RenderSpecTask::doWork() {
 
       glm::vec3 norm = glm::normalize(
           glm::cross((worldVs[0] - worldVs[1]), (worldVs[2] - worldVs[1])));
-
       glm::vec3 faceCenter = (worldVs[0] + worldVs[1] + worldVs[2]) / 3.0f;
       glm::vec3 viewDir = glm::normalize(faceCenter - _ctx.viewPos);
       if (glm::dot(viewDir, norm) < 0) {

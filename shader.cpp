@@ -1,4 +1,6 @@
 #include "shader.h"
+#include "color.h"
+
 #include <cmath>
 #include <glm/geometric.hpp>
 
@@ -17,10 +19,7 @@ uint32_t TriangleShader::fragment(glm::vec3 position) {
     intensity /= mxIntensity;
   }
 
-  uint32_t color = (int(intensity[0] * 255) << 16) +
-                   (int(intensity[1] * 255) << 8) + int(intensity[2] * 255);
-
-  return color;
+  return Color(intensity.x, intensity.y, intensity.z).color();
 }
 
 void TriangleShader::setContext(Context ctx) { _ctx = ctx; }
@@ -46,11 +45,7 @@ uint32_t PhongShader::fragment(glm::vec3 position) {
 
   glm::vec3 intensity = _ctx.ambient + diffuseColor + specularColor;
 
-  uint32_t color = (std::min(int(intensity[0] * 255), 255) << 16) +
-                   (std::min(int(intensity[1] * 255), 255) << 8) +
-                   (std::min(int(intensity[2] * 255), 255));
-
-  return color;
+  return Color(intensity.x, intensity.y, intensity.z).color();
 }
 
 void PhongShader::setContext(Context ctx) { _ctx = ctx; }

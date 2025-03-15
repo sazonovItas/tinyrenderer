@@ -23,7 +23,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#define MODEL "models/blank_body.obj"
+#define MODEL "models/night-stalker.obj"
 
 #define LIGHT_COUNT 2
 #define CAMERA_RADIUS 10.0f
@@ -55,7 +55,7 @@ private:
   Camera camera;
 
   void initThreadPool() {
-#define THREAD_COUNT 16
+#define THREAD_COUNT 8
     threadPool = new MT::ThreadPool(THREAD_COUNT);
   }
 
