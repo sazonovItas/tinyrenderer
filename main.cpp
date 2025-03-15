@@ -23,7 +23,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#define MODEL "models/house.obj"
+#define MODEL "models/blank_body.obj"
 
 #define LIGHT_COUNT 2
 #define CAMERA_RADIUS 10.0f
@@ -41,7 +41,7 @@ public:
   }
 
 private:
-  enum RenderMode { RenderLines, RenderTriangleSimpleLight, RenderSpecLight };
+  enum RenderMode { RenderLines, RenderTriangles, RenderPhongLight };
 
   SDL_Window *window;
   RenderMode currentRenderMode = RenderLines;
@@ -115,14 +115,10 @@ private:
 
         if (event.type == SDL_MOUSEMOTION &&
             event.button.button == SDL_BUTTON(SDL_BUTTON_LEFT)) {
-          if (SDL_GetModState() & KMOD_LSHIFT) {
-            camera.move(-event.motion.x * event.motion.xrel * 0.0003f,
-                        event.motion.y * event.motion.yrel * 0.0003f);
-          } else {
-            camera.rotate(
-                glm::radians(-event.motion.x * event.motion.xrel * 0.0003f),
-                glm::radians(event.motion.y * event.motion.yrel * 0.0003f));
-          }
+          camera.rotate(
+              glm::radians(-event.motion.x * event.motion.xrel * 0.0003f),
+              glm::radians(event.motion.y * event.motion.yrel * 0.0003f));
+
           rerender = true;
         }
 
@@ -132,10 +128,10 @@ private:
             currentRenderMode = RenderLines;
             break;
           case SDLK_2:
-            currentRenderMode = RenderTriangleSimpleLight;
+            currentRenderMode = RenderTriangles;
             break;
           case SDLK_3:
-            currentRenderMode = RenderSpecLight;
+            currentRenderMode = RenderPhongLight;
             break;
           }
 
@@ -159,7 +155,7 @@ private:
     image->resize(surface->w, surface->h);
     zbuffer->resize(surface->w, surface->h);
 
-    image->clear(0x00222222);
+    image->clear(0x00);
     zbuffer->clear();
 
     render();
@@ -176,7 +172,8 @@ private:
 #define FOV 90.0f
 
     float aspect = float(image->width) / float(image->height);
-    glm::mat4x4 proj = glm::perspective(FOV, aspect, Z_NEAR, Z_FAR);
+    glm::mat4x4 proj =
+        glm::perspective(glm::radians(FOV), aspect, Z_NEAR, Z_FAR);
     glm::mat4x4 view = camera.view();
     glm::mat4x4 viewport = geom::viewport(0, 0, image->width, image->height);
 
@@ -197,11 +194,11 @@ private:
       _vctx.rangeNorms = {i * normsPerThread, (i + 1) * normsPerThread};
 
       if (i == THREAD_COUNT - 1) {
-        _vctx.range = {i * vertsPerThread, model->nverts()};
-        _vctx.rangeNorms = {i * normsPerThread, model->nnorms()};
+        _vctx.range.second = model->nverts();
+        _vctx.rangeNorms.second = model->nnorms();
       }
 
-      threadPool->add_task(VertexTransformTask(_vctx));
+      threadPool->addTask(VertexTransformTask(_vctx));
     }
 
     threadPool->wait();
@@ -210,10 +207,10 @@ private:
     case RenderLines:
       renderLines();
       break;
-    case RenderTriangleSimpleLight:
-      renderTriangleSimpleLight();
+    case RenderTriangles:
+      renderTriangles();
       break;
-    case RenderSpecLight:
+    case RenderPhongLight:
       renderPhongLight();
       break;
     }
@@ -225,6 +222,7 @@ private:
         .image = image,
         .zNear = Z_NEAR,
         .zFar = Z_FAR,
+        .color = 0x00FFFFFF,
     };
 
     int facePerThread = model->nfaces() / THREAD_COUNT;
@@ -232,27 +230,30 @@ private:
     for (int i = 0; i < THREAD_COUNT; i++) {
       _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
       if (i == THREAD_COUNT - 1) {
-        _rctx.range = {(THREAD_COUNT - 1) * facePerThread, model->nfaces()};
+        _rctx.range.second = model->nfaces();
       }
 
-      threadPool->add_task(RenderLineTask(_rctx));
+      threadPool->addTask(RenderLineTask(_rctx));
     }
 
     threadPool->wait();
   }
 
-  void renderTriangleSimpleLight() {
+  void renderTriangles() {
     lightPositions[0] = camera.position();
 
     RenderTriangleTask::Context _rctx = {
         .model = model,
         .image = image,
         .zbuffer = zbuffer,
+
         .zNear = Z_NEAR,
         .zFar = Z_FAR,
+
         .lightCnt = LIGHT_COUNT + 1,
         .lightColors = lightColors,
         .lightPositions = lightPositions,
+
         .viewPos = camera.position(),
     };
 
@@ -264,7 +265,7 @@ private:
         _rctx.range.second = model->nfaces();
       }
 
-      threadPool->add_task(RenderTriangleTask(_rctx));
+      threadPool->addTask(RenderTriangleTask(_rctx));
     }
 
     threadPool->wait();
@@ -282,24 +283,6 @@ private:
         .lightColor = lightColors[0],
         .viewPos = camera.position(),
 
-        // Bronze
-        // .ambient = glm::vec3(0.2121, 0.1275, 0.054),
-        // .diffuse = glm::vec3(0.714, 0.4284, 0.18144),
-        // .specular = glm::vec3(0.393548, 0.271906, 0.166721),
-        // .shininess = 25.6,
-
-        // Polished bronze
-        // .ambient = glm::vec3(0.25, 0.148, 0.06475),
-        // .diffuse = glm::vec3(0.4, 0.2368, 0.1036),
-        // .specular = glm::vec3(0.7746, 0.4586, 0.200621),
-        // .shininess = 76.8,
-
-        // Polished silver
-        // .ambient = glm::vec3(0.2313, 0.2313, 0.2313),
-        // .diffuse = glm::vec3(0.4775, 0.4775, 0.4775),
-        // .specular = glm::vec3(0.7739, 0.7739, 0.7739),
-        // .shininess = 89.6,
-
         // Ruby
         .ambient = glm::vec3(0.1745, 0.01175, 0.01175),
         .diffuse = glm::vec3(0.61424, 0.04136, 0.04136),
@@ -315,7 +298,7 @@ private:
         _rctx.range.second = model->nfaces();
       }
 
-      threadPool->add_task(RenderSpecTask(_rctx));
+      threadPool->addTask(RenderSpecTask(_rctx));
     }
 
     threadPool->wait();

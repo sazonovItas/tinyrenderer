@@ -1,5 +1,7 @@
 #include "render.h"
 #include "gl.h"
+#include "shader.h"
+
 #include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
 
@@ -12,15 +14,16 @@ void VertexTransformTask::doWork() {
   std::pair<int, int> range = _ctx.range;
   std::pair<int, int> rangeNorms = _ctx.rangeNorms;
 
+  glm::mat4x4 mat = _ctx.viewport * _ctx.proj * _ctx.view * _ctx.transform;
+  glm::mat4x4 world = _ctx.transform;
+
   for (int i = range.first; i < range.second; i++) {
-    model->transformedVerts[i] = _ctx.viewport * _ctx.proj * _ctx.view *
-                                 _ctx.transform *
-                                 glm::vec4(model->vert(i), 1.0);
+    model->transformedVerts[i] = mat * glm::vec4(model->vert(i), 1.0);
+    model->worldVerts[i] = world * glm::vec4(model->vert(i), 1.0);
   }
 
   for (int i = rangeNorms.first; i < rangeNorms.second; i++) {
-    model->transformedNorms[i] =
-        _ctx.transform * glm::vec4(model->norm(i), 0.0);
+    model->worldNorms[i] = world * glm::vec4(model->norm(i), 0.0);
   }
 }
 
@@ -28,6 +31,7 @@ RenderLineTask::RenderLineTask(Context _ctx) : Task() { this->_ctx = _ctx; }
 
 void RenderLineTask::doWork() {
   Model *model = _ctx.model;
+
   std::pair<int, int> range = _ctx.range;
   int width = _ctx.image->width, height = _ctx.image->height;
   float zNear = _ctx.zNear, zFar = _ctx.zFar;
@@ -57,7 +61,7 @@ void RenderLineTask::doWork() {
       if (mxV.x < 0 || mxV.y < 0 || mnV.x >= width || mnV.y >= height)
         continue;
 
-      gl::line(v1.x, v1.y, v2.x, v2.y, *_ctx.image, 0x00FFFFFF);
+      gl::line(v1.x, v1.y, v2.x, v2.y, *_ctx.image, _ctx.color);
     }
   }
 }
@@ -68,8 +72,13 @@ RenderTriangleTask::RenderTriangleTask(Context _ctx) : Task() {
 
 void RenderTriangleTask::doWork() {
   Model *model = _ctx.model;
+  Image *image = _ctx.image;
+  ZBuffer *zbuffer = _ctx.zbuffer;
+
   std::pair<int, int> range = _ctx.range;
   float zNear = _ctx.zNear, zFar = _ctx.zFar;
+
+  TriangleShader shader;
 
   for (int iface = range.first; iface < range.second; iface++) {
     glm::vec4 v[3] = {
@@ -78,61 +87,50 @@ void RenderTriangleTask::doWork() {
         model->transformedVerts[model->vertIdx(iface, 2)],
     };
 
-    bool clip = true;
+    bool clip = false;
 
     for (int i = 0; i < 3; i++) {
       if (v[i].w < 0.0 || v[i].w < 0.0) {
-        clip = false;
+        clip = true;
         break;
       }
 
       v[i].x /= v[i].w, v[i].y /= v[i].w, v[i].z /= v[i].w, v[i].w /= v[i].w;
 
       if (v[i].z < zNear || v[i].z > zFar) {
-        clip = false;
+        clip = true;
         break;
       }
     }
 
-    if (clip) {
+    if (!clip) {
       glm::vec3 norm = glm::normalize(
           glm::cross((model->vert(iface, 0) - model->vert(iface, 1)),
                      (model->vert(iface, 2) - model->vert(iface, 0))));
 
       glm::vec3 worldV[3] = {
-          model->vert(iface, 0),
-          model->vert(iface, 1),
-          model->vert(iface, 2),
+          model->worldVerts[model->vertIdx(iface, 0)],
+          model->worldVerts[model->vertIdx(iface, 1)],
+          model->worldVerts[model->vertIdx(iface, 2)],
       };
-      glm::vec3 faceCenter = (worldV[0] + worldV[1] + worldV[2]) / 3.0f;
-      glm::vec3 viewDir = glm::normalize(faceCenter - _ctx.viewPos);
 
+      glm::vec3 fragPos = (worldV[0] + worldV[1] + worldV[2]) / 3.0f;
+      glm::vec3 viewDir = glm::normalize(fragPos - _ctx.viewPos);
       if (glm::dot(viewDir, norm) < 0) {
         continue;
       }
 
-      glm::vec3 intensity(0.1, 0.1, 0.1);
+      TriangleShader::Context ctx = {
+          .lightCnt = _ctx.lightCnt,
+          .lights = _ctx.lightPositions.data(),
+          .lightColors = _ctx.lightColors.data(),
+          .fragPos = fragPos,
+          .fragNormal = norm,
+      };
+
       glm::vec3 vs[3] = {v[0], v[1], v[2]};
-
-      for (int i = 0; i < _ctx.lightCnt; i++) {
-        glm::vec3 lightDir =
-            glm::normalize(faceCenter - _ctx.lightPositions[i]);
-        float lightIntensity =
-            std::max(0.0f, std::min(1.0f, glm::dot(norm, lightDir)));
-        intensity += lightIntensity * _ctx.lightColors[i];
-      }
-
-      float maxIntensity =
-          std::max(intensity[0], std::max(intensity[1], intensity[2]));
-
-      if (maxIntensity > 1.0) {
-        intensity /= maxIntensity;
-      }
-
-      gl::halfSpaceTriangle(vs, *_ctx.image, *_ctx.zbuffer,
-                            (int(intensity[0] * 255) << 16) +
-                                (int(intensity[1] * 255) << 8) +
-                                int(intensity[2] * 255));
+      uint32_t color = shader.fragment(ctx);
+      gl::halfSpaceTriangle(vs, *image, *zbuffer, color);
     }
   }
 }
@@ -141,8 +139,13 @@ RenderSpecTask::RenderSpecTask(Context _ctx) : Task() { this->_ctx = _ctx; }
 
 void RenderSpecTask::doWork() {
   Model *model = _ctx.model;
+  Image *image = _ctx.image;
+  ZBuffer *zbuffer = _ctx.zbuffer;
+
   std::pair<int, int> range = _ctx.range;
   float zNear = _ctx.zNear, zFar = _ctx.zFar;
+
+  PhongShader shader;
 
   for (int iface = range.first; iface < range.second; iface++) {
     glm::vec4 v[3] = {
@@ -151,23 +154,23 @@ void RenderSpecTask::doWork() {
         model->transformedVerts[model->vertIdx(iface, 2)],
     };
 
-    bool clip = true;
+    bool clip = false;
 
     for (int i = 0; i < 3; i++) {
-      if (v[i].w < 0.0 || v[i].w < 0.0) {
-        clip = false;
+      if (v[i].w < 0.0) {
+        clip = true;
         break;
       }
 
       v[i].x /= v[i].w, v[i].y /= v[i].w, v[i].z /= v[i].w, v[i].w /= v[i].w;
 
       if (v[i].z < zNear || v[i].z > zFar) {
-        clip = false;
+        clip = true;
         break;
       }
     }
 
-    if (clip) {
+    if (!clip) {
       glm::vec3 normals[3] = {
           glm::normalize(model->norm(iface, 0)),
           glm::normalize(model->norm(iface, 1)),
@@ -175,25 +178,32 @@ void RenderSpecTask::doWork() {
       };
 
       glm::vec3 worldV[3] = {
-          model->vert(iface, 0),
-          model->vert(iface, 1),
-          model->vert(iface, 2),
+          model->worldVerts[model->vertIdx(iface, 0)],
+          model->worldVerts[model->vertIdx(iface, 1)],
+          model->worldVerts[model->vertIdx(iface, 2)],
       };
+
       glm::vec3 norm = glm::normalize(
           glm::cross((worldV[0] - worldV[1]), (worldV[2] - worldV[1])));
+
       glm::vec3 faceCenter = (worldV[0] + worldV[1] + worldV[2]) / 3.0f;
       glm::vec3 viewDir = glm::normalize(faceCenter - _ctx.viewPos);
-
       if (glm::dot(viewDir, norm) < 0) {
         continue;
       }
 
-      glm::vec3 vs[3] = {v[0], v[1], v[2]};
+      PhongShader::Context ctx = {
+          .viewPos = _ctx.viewPos,
+          .lightPos = _ctx.lightPos,
+          .lightColor = _ctx.lightColor,
+          .ambient = _ctx.ambient,
+          .diffuse = _ctx.diffuse,
+          .specular = _ctx.specular,
+          .shininess = _ctx.shininess,
+      };
 
-      gl::halfSpaceTriangle(vs, *_ctx.image, *_ctx.zbuffer, worldV, normals,
-                            _ctx.lightPos, _ctx.lightColor, _ctx.viewPos,
-                            _ctx.ambient, _ctx.diffuse, _ctx.specular,
-                            _ctx.shininess);
+      glm::vec3 vs[3] = {v[0], v[1], v[2]};
+      gl::halfSpaceTriangle(vs, *image, *zbuffer, worldV, normals, shader, ctx);
     }
   }
 }

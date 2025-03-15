@@ -25,8 +25,9 @@ public:
   Model();
   Model(const std::string filename);
 
+  std::vector<glm::vec4> worldVerts = {};
+  std::vector<glm::vec4> worldNorms = {};
   std::vector<glm::vec4> transformedVerts = {};
-  std::vector<glm::vec4> transformedNorms = {};
 
   int nverts() const;
   int nfaces() const;

@@ -3,10 +3,10 @@
 #include <glm/geometric.hpp>
 
 glm::mat4x4 geom::viewport(const int x, const int y, const int w, const int h) {
-  return glm::transpose(glm::mat4x4(
-      glm::vec4(w / 2.0, 0.0, 0.0, x + w / 2.0 + 0.5),
-      glm::vec4(0.0, -h / 2.0, 0.0, y + h / 2.0 + 0.5),
-      glm::vec4(0.0, 0.0, 1.0, 0.0), glm::vec4(0.0, 0.0, 0.0, 1.0)));
+  return glm::transpose(glm::mat4x4(glm::vec4(w / 2.0, 0.0, 0.0, x + w / 2.0),
+                                    glm::vec4(0.0, -h / 2.0, 0.0, y + h / 2.0),
+                                    glm::vec4(0.0, 0.0, 1.0, 0.0),
+                                    glm::vec4(0.0, 0.0, 0.0, 1.0)));
 };
 
 glm::mat4x4 geom::view(glm::vec3 forward, glm::vec3 right, glm::vec3 up) {

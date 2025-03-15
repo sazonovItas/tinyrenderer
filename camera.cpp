@@ -46,9 +46,12 @@ void Camera::rotateYaw(float dAngle) {
 }
 
 void Camera::rotatePitch(float dAngle) {
+  const float maxPitchAngle = M_PI / 2.0f - 0.001f;
+  const float minPitchAngle = -M_PI / 2.0f + 0.001f;
+
   this->pitch += dAngle;
-  this->pitch = std::min(this->pitch, float(M_PI / 2.0f - 0.001f));
-  this->pitch = std::max(this->pitch, float(-M_PI / 2.0f + 0.001f));
+  this->pitch = std::min(this->pitch, maxPitchAngle);
+  this->pitch = std::max(this->pitch, minPitchAngle);
 }
 
 void Camera::rotate(float yawAngle, float pitchAngle) {

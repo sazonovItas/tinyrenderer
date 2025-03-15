@@ -67,13 +67,18 @@ Model::Model(const std::string filename) {
   triangulate(faceVertCnt);
 
   transformedVerts = std::vector<glm::vec4>(verts.size());
-  for (int i = 0; i < transformedVerts.size(); i++) {
+  for (int i = 0; i < verts.size(); i++) {
     transformedVerts[i] = glm::vec4(verts[i], 1.0);
   }
 
-  transformedNorms = std::vector<glm::vec4>(norms.size());
-  for (int i = 0; i < transformedNorms.size(); i++) {
-    transformedNorms[i] = glm::vec4(norms[i], 0.0);
+  worldVerts = std::vector<glm::vec4>(verts.size());
+  for (int i = 0; i < verts.size(); i++) {
+    worldVerts[i] = glm::vec4(verts[i], 1.0);
+  }
+
+  worldNorms = std::vector<glm::vec4>(norms.size());
+  for (int i = 0; i < worldNorms.size(); i++) {
+    worldNorms[i] = glm::vec4(norms[i], 0.0);
   }
 }
 

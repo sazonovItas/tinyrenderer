@@ -44,7 +44,7 @@ class ThreadPool {
 public:
   ThreadPool(int cntThreads);
 
-  template <typename TaskChild> MT::task_id add_task(const TaskChild &task) {
+  template <typename TaskChild> MT::task_id addTask(const TaskChild &task) {
     std::lock_guard<std::mutex> lock(task_queue_mutex);
     task_queue.push(std::make_shared<TaskChild>(task));
     task_queue.back()->id = ++last_task_id;

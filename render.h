@@ -38,6 +38,8 @@ public:
 
     float zNear, zFar;
 
+    uint32_t color;
+
     std::pair<int, int> range;
   };
 

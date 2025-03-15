@@ -44,7 +44,7 @@ ZBuffer::ZBuffer(int width, int height) {
 
 void ZBuffer::clear() {
   for (int i = buffer.size(); i--;) {
-    buffer[i] = std::numeric_limits<float>::max();
+    buffer[i] = -std::numeric_limits<float>::max();
   }
 }
 
@@ -61,8 +61,8 @@ bool ZBuffer::set(int x, int y, float z) {
   bool ok = false;
 
   locks[x + y * width].lock();
-  if (buffer[int(x + y * width)] > z) {
-    buffer[int(x + y * width)] = z;
+  if (buffer[int(x + y * width)] < 1.0 / z) {
+    buffer[int(x + y * width)] = 1.0 / z;
     ok = true;
   }
   locks[x + y * width].unlock();

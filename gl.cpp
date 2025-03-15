@@ -1,5 +1,6 @@
 #include "gl.h"
 #include "geometry.h"
+
 #include <cmath>
 #include <glm/ext/quaternion_geometric.hpp>
 #include <glm/fwd.hpp>
@@ -131,10 +132,7 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
 
 void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
                            glm::vec3 *wP, glm::vec3 *normals,
-                           glm::vec3 lightPos, glm::vec3 lightColor,
-                           glm::vec3 viewPos, glm::vec3 ambient,
-                           glm::vec3 diffuse, glm::vec3 specular,
-                           float shininess) {
+                           PhongShader &shader, PhongShader::Context ctx) {
   int xMin =
       std::max(0, (int)std::ceil(std::min(p[0].x, std::min(p[1].x, p[2].x))));
   int yMin =
@@ -185,26 +183,12 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
         glm::vec3 fragPos = wP[0] * b.x + wP[1] * b.y + wP[2] * b.z;
         glm::vec3 fragNorm = glm::normalize(
             b.x * normals[0] + b.y * normals[1] + b.z * normals[2]);
-        glm::vec3 lightDir = -glm::normalize(fragPos - lightPos);
-        glm::vec3 viewDir = glm::normalize(viewPos - fragPos);
 
-        glm::vec3 ambientColor = lightColor * ambient;
-
-        float diff = std::max(0.0f, glm::dot(fragNorm, lightDir));
-        glm::vec3 diffuseColor = lightColor * (diff * diffuse);
-
-        glm::vec3 reflectDir = glm::reflect(-lightDir, fragNorm);
-        float spec =
-            pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), shininess);
-        glm::vec3 specularColor = lightColor * (spec * specular);
-
-        glm::vec3 intensity = ambientColor + diffuseColor + specularColor;
+        ctx.fragPos = fragPos;
+        ctx.fragNorm = fragNorm;
 
         if (zbuffer.set(x, y, z)) {
-          image.set(x, y,
-                    (std::min(int(intensity[0] * 255), 255) << 16) +
-                        (std::min(int(intensity[1] * 255), 255) << 8) +
-                        std::min(int(intensity[2] * 255), 255));
+          image.set(x, y, shader.fragment(ctx));
         }
       }
     }
