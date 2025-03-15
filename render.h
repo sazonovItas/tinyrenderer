@@ -82,7 +82,9 @@ public:
 
     float zNear, zFar;
 
-    glm::vec3 lightDir;
+    glm::vec3 lightPos, lightColor, viewPos;
+    glm::vec3 ambient, diffuse, specular;
+    float shininess;
 
     std::pair<int, int> range;
   };

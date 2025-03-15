@@ -1,5 +1,6 @@
 #include "render.h"
 #include "gl.h"
+#include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
 
 VertexTransformTask::VertexTransformTask(Context _ctx) : Task() {
@@ -132,7 +133,6 @@ void RenderSpecTask::doWork() {
   Model *model = _ctx.model;
   std::pair<int, int> range = _ctx.range;
   float zNear = _ctx.zNear, zFar = _ctx.zFar;
-  glm::vec3 lightDir = _ctx.lightDir;
 
   for (int iface = range.first; iface < range.second; iface++) {
     glm::vec4 v[3] = {
@@ -163,10 +163,19 @@ void RenderSpecTask::doWork() {
         glm::normalize(model->norm(iface, 2)),
     };
 
+    glm::vec3 worldV[3] = {
+        model->vert(iface, 0),
+        model->vert(iface, 1),
+        model->vert(iface, 2),
+    };
+
     glm::vec3 vs[3] = {v[0], v[1], v[2]};
 
     if (clip) {
-      gl::halfSpaceTriangle(vs, *_ctx.image, *_ctx.zbuffer, normals, lightDir);
+      gl::halfSpaceTriangle(vs, *_ctx.image, *_ctx.zbuffer, worldV, normals,
+                            _ctx.lightPos, _ctx.lightColor, _ctx.viewPos,
+                            _ctx.ambient, _ctx.diffuse, _ctx.specular,
+                            _ctx.shininess);
     }
   }
 }

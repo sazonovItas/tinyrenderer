@@ -130,7 +130,11 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
 }
 
 void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
-                           glm::vec3 *normals, glm::vec3 lightDir) {
+                           glm::vec3 *wP, glm::vec3 *normals,
+                           glm::vec3 lightPos, glm::vec3 lightColor,
+                           glm::vec3 viewPos, glm::vec3 ambient,
+                           glm::vec3 diffuse, glm::vec3 specular,
+                           float shininess) {
   int xMin =
       std::max(0, (int)std::ceil(std::min(p[0].x, std::min(p[1].x, p[2].x))));
   int yMin =
@@ -178,15 +182,29 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
       if ((b.x > 0 && b.y > 0 && b.z >= 0) || (b.x == 0 && f1) ||
           (b.y == 0 && f2) || (b.z == 0 && f3)) {
         float z = b.x * p[0].z + b.y * p[1].z + p[2].z * b.z;
+        glm::vec3 fragPos = wP[0] * b.x + wP[1] * b.y + wP[2] * b.z;
+        glm::vec3 fragNorm = glm::normalize(
+            b.x * normals[0] + b.y * normals[1] + b.z * normals[2]);
+        glm::vec3 lightDir = glm::normalize(fragPos - lightPos);
 
-        glm::vec3 norm = b.x * normals[0] + b.y * normals[1] + b.z * normals[2];
-        float intensity =
-            std::max(0.1f, std::min(1.0f, glm::dot(norm, -lightDir)));
+        glm::vec3 ambientColor = lightColor * ambient;
+
+        float diff = std::max(0.0f, glm::dot(fragNorm, lightDir));
+        glm::vec3 diffuseColor = lightColor * (diff * diffuse);
+
+        glm::vec3 viewDir = glm::normalize(viewPos - fragPos);
+        glm::vec3 reflectDir = glm::reflect(lightDir, fragNorm);
+        float spec =
+            pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), shininess);
+        glm::vec3 specularColor = lightColor * (spec * specular);
+
+        glm::vec3 intensity = ambientColor + diffuseColor + specularColor;
 
         if (zbuffer.set(x, y, z)) {
           image.set(x, y,
-                    (int(intensity * 255) << 16) + (int(intensity * 255) << 8) +
-                        int(intensity * 255));
+                    (int(intensity[0] * 255) << 16) +
+                        (int(intensity[1] * 255) << 8) +
+                        int(intensity[2] * 255));
         }
       }
     }
