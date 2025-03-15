@@ -6,7 +6,12 @@
 #include <cstdint>
 #include <glm/glm.hpp>
 
-class TriangleShader {
+class Shader {
+public:
+  virtual uint32_t fragment(glm::vec3 position) = 0;
+};
+
+class TriangleShader : public Shader {
 public:
   struct Context {
     int lightCnt;
@@ -16,24 +21,28 @@ public:
     glm::vec3 fragPos, fragNormal;
   };
 
-  static uint32_t fragment(Context ctx);
+  void setContext(Context ctx);
+  uint32_t fragment(glm::vec3 position) override;
 
 private:
   Context _ctx;
 };
 
-class PhongShader {
+class PhongShader : public Shader {
 public:
   struct Context {
+    glm::vec3 *normals;
+    glm::vec3 *worldVs;
+
     glm::vec3 viewPos;
-    glm::vec3 fragPos, fragNorm;
 
     glm::vec3 lightPos, lightColor;
     glm::vec3 ambient, diffuse, specular;
     float shininess;
   };
 
-  uint32_t fragment(Context ctx);
+  void setContext(Context ctx);
+  uint32_t fragment(glm::vec3 position) override;
 
 private:
   Context _ctx;

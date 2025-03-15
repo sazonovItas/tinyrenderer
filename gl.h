@@ -17,8 +17,7 @@ void halfSpaceTriangle(glm::vec3 *points, Image &image, ZBuffer &zubffer,
                        uint32_t color);
 
 void halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
-                       glm::vec3 *wP, glm::vec3 *normals, PhongShader &shader,
-                       PhongShader::Context ctx);
+                       Shader &shader);
 }; // namespace gl
 
 #endif

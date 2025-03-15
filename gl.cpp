@@ -131,8 +131,7 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
 }
 
 void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
-                           glm::vec3 *wP, glm::vec3 *normals,
-                           PhongShader &shader, PhongShader::Context ctx) {
+                           Shader &shader) {
   int xMin =
       std::max(0, (int)std::ceil(std::min(p[0].x, std::min(p[1].x, p[2].x))));
   int yMin =
@@ -180,15 +179,9 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
       if ((b.x > 0 && b.y > 0 && b.z >= 0) || (b.x == 0 && f1) ||
           (b.y == 0 && f2) || (b.z == 0 && f3)) {
         float z = b.x * p[0].z + b.y * p[1].z + p[2].z * b.z;
-        glm::vec3 fragPos = wP[0] * b.x + wP[1] * b.y + wP[2] * b.z;
-        glm::vec3 fragNorm = glm::normalize(
-            b.x * normals[0] + b.y * normals[1] + b.z * normals[2]);
-
-        ctx.fragPos = fragPos;
-        ctx.fragNorm = fragNorm;
 
         if (zbuffer.set(x, y, z)) {
-          image.set(x, y, shader.fragment(ctx));
+          image.set(x, y, shader.fragment(b));
         }
       }
     }

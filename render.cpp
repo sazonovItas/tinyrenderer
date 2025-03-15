@@ -127,10 +127,10 @@ void RenderTriangleTask::doWork() {
           .fragPos = fragPos,
           .fragNormal = norm,
       };
+      shader.setContext(ctx);
 
       glm::vec3 vs[3] = {v[0], v[1], v[2]};
-      uint32_t color = shader.fragment(ctx);
-      gl::halfSpaceTriangle(vs, *image, *zbuffer, color);
+      gl::halfSpaceTriangle(vs, *image, *zbuffer, shader.fragment({}));
     }
   }
 }
@@ -177,22 +177,24 @@ void RenderSpecTask::doWork() {
           glm::normalize(model->norm(iface, 2)),
       };
 
-      glm::vec3 worldV[3] = {
+      glm::vec3 worldVs[3] = {
           model->worldVerts[model->vertIdx(iface, 0)],
           model->worldVerts[model->vertIdx(iface, 1)],
           model->worldVerts[model->vertIdx(iface, 2)],
       };
 
       glm::vec3 norm = glm::normalize(
-          glm::cross((worldV[0] - worldV[1]), (worldV[2] - worldV[1])));
+          glm::cross((worldVs[0] - worldVs[1]), (worldVs[2] - worldVs[1])));
 
-      glm::vec3 faceCenter = (worldV[0] + worldV[1] + worldV[2]) / 3.0f;
+      glm::vec3 faceCenter = (worldVs[0] + worldVs[1] + worldVs[2]) / 3.0f;
       glm::vec3 viewDir = glm::normalize(faceCenter - _ctx.viewPos);
       if (glm::dot(viewDir, norm) < 0) {
         continue;
       }
 
       PhongShader::Context ctx = {
+          .normals = normals,
+          .worldVs = worldVs,
           .viewPos = _ctx.viewPos,
           .lightPos = _ctx.lightPos,
           .lightColor = _ctx.lightColor,
@@ -201,9 +203,10 @@ void RenderSpecTask::doWork() {
           .specular = _ctx.specular,
           .shininess = _ctx.shininess,
       };
+      shader.setContext(ctx);
 
       glm::vec3 vs[3] = {v[0], v[1], v[2]};
-      gl::halfSpaceTriangle(vs, *image, *zbuffer, worldV, normals, shader, ctx);
+      gl::halfSpaceTriangle(vs, *image, *zbuffer, shader);
     }
   }
 }
