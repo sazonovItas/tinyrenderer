@@ -135,9 +135,9 @@ void RenderTriangleTask::doWork() {
   }
 }
 
-RenderSpecTask::RenderSpecTask(Context _ctx) : Task() { this->_ctx = _ctx; }
+RenderPhongTask::RenderPhongTask(Context _ctx) : Task() { this->_ctx = _ctx; }
 
-void RenderSpecTask::doWork() {
+void RenderPhongTask::doWork() {
   Model *model = _ctx.model;
   Image *image = _ctx.image;
   ZBuffer *zbuffer = _ctx.zbuffer;

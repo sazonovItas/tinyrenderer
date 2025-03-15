@@ -23,7 +23,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#define MODEL "models/night-stalker.obj"
+#define MODEL "models/napoleon.obj"
 
 #define LIGHT_COUNT 2
 #define CAMERA_RADIUS 10.0f
@@ -55,7 +55,7 @@ private:
   Camera camera;
 
   void initThreadPool() {
-#define THREAD_COUNT 8
+#define THREAD_COUNT 16
     threadPool = new MT::ThreadPool(THREAD_COUNT);
   }
 
@@ -272,7 +272,7 @@ private:
   }
 
   void renderPhongLight() {
-    RenderSpecTask::Context _rctx = {
+    RenderPhongTask::Context _rctx = {
         .model = model,
         .image = image,
         .zbuffer = zbuffer,
@@ -298,7 +298,7 @@ private:
         _rctx.range.second = model->nfaces();
       }
 
-      threadPool->addTask(RenderSpecTask(_rctx));
+      threadPool->addTask(RenderPhongTask(_rctx));
     }
 
     threadPool->wait();

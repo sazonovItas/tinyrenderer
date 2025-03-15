@@ -76,7 +76,7 @@ private:
   Context _ctx;
 };
 
-class RenderSpecTask : public MT::Task {
+class RenderPhongTask : public MT::Task {
 public:
   struct Context {
     Model *model;
@@ -92,7 +92,7 @@ public:
     std::pair<int, int> range;
   };
 
-  RenderSpecTask(Context _ctx);
+  RenderPhongTask(Context _ctx);
 
   void doWork() override;
 
