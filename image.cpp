@@ -3,35 +3,67 @@
 #include <SDL_stdinc.h>
 #include <cstring>
 #include <limits>
+#include <vips/image.h>
 
 Image::Image() {}
 
-Image::Image(int width, int height) {
+Image::Image(std::string filename) {
+  _image = vips_image_new_from_file(filename.c_str(), NULL);
+  vips_image_inplace(_image);
+}
+
+int Image::width() { return _image->Xsize; }
+
+int Image::height() { return _image->Ysize; }
+
+uint32_t Image::get_pixel(int x, int y) {
+  return *(uint32_t *)(VIPS_IMAGE_ADDR(_image, x, y));
+}
+
+uint32_t Image::get_pixel_uv(float x, float y) {
+  return get_pixel(x * width(), y * height());
+}
+
+glm::vec3 Image::get_color(int x, int y) {
+  uint32_t color = get_pixel(x, y);
+  float r = uint8_t(color >> 16) / 255.0;
+  float g = uint8_t(color >> 8) / 255.0;
+  float b = uint8_t(color) / 255.0;
+  return glm::vec3(r, g, b);
+}
+
+glm::vec3 Image::get_color_uv(float x, float y) {
+  return get_color(x * width(), y * height());
+}
+
+ImageBuffer::ImageBuffer() {}
+
+ImageBuffer::ImageBuffer(int width, int height) {
   this->width = width;
   this->height = height;
   buffer.resize(width * height);
 }
 
-int Image::size() { return height * width; }
+int ImageBuffer::size() { return height * width; }
 
-void Image::clear(uint32_t color) {
+void ImageBuffer::clear(uint32_t color) {
   SDL_memset4(buffer.data(), color, buffer.size());
 }
 
-void Image::resize(int width, int height) {
+void ImageBuffer::resize(int width, int height) {
   this->width = width;
   this->height = height;
   buffer.resize(width * height);
 }
 
-void Image::set(int x, int y, uint32_t color) {
+void ImageBuffer::set(int x, int y, uint32_t color) {
   if (y >= height || y < 0 || x >= width || x < 0)
     return;
 
   buffer[width * y + x] = color;
 }
 
-uint32_t *Image::data() { return buffer.data(); }
+uint32_t *ImageBuffer::data() { return buffer.data(); }
 
 ZBuffer::ZBuffer() {}
 

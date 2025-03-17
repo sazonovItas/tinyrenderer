@@ -1,5 +1,6 @@
 #include "model.h"
 #include "geometry.h"
+#include "image.h"
 
 #include <fstream>
 #include <glm/fwd.hpp>
@@ -8,8 +9,10 @@
 #include <sstream>
 #include <stdexcept>
 #include <vector>
-
-Model::Model() {}
+#include <vips/arithmetic.h>
+#include <vips/basic.h>
+#include <vips/image.h>
+#include <vips/vips.h>
 
 Model::Model(const std::string filename) {
   std::ifstream in;
@@ -17,7 +20,7 @@ Model::Model(const std::string filename) {
   in.open(filename, std::ifstream::in);
 
   if (in.fail())
-    throw std::runtime_error("failed to open file");
+    throw std::runtime_error("failed to open obj file");
 
   std::vector<int> faceVertCnt;
 
@@ -40,6 +43,14 @@ Model::Model(const std::string filename) {
         iss >> v[i];
 
       verts.push_back(v);
+    } else if (!line.compare(0, 3, "vt ")) {
+      iss >> trash >> trash;
+
+      glm::vec2 uv;
+      for (int i : {0, 1})
+        iss >> uv[i];
+
+      uvs.push_back(uv);
     } else if (!line.compare(0, 3, "vn ")) {
       iss >> trash >> trash;
 
@@ -50,7 +61,6 @@ Model::Model(const std::string filename) {
       norms.push_back(glm::normalize(n));
     } else if (!line.compare(0, 2, "f ")) {
       iss >> trash;
-
       int v, uv, n, cnt = 0;
 
       while (iss >> v >> trash >> uv >> trash >> n) {
@@ -80,6 +90,11 @@ Model::Model(const std::string filename) {
   for (int i = 0; i < worldNorms.size(); i++) {
     worldNorms[i] = glm::vec4(norms[i], 0.0);
   }
+}
+
+void Model::parseTextures(std::string diffuse, std::string normal,
+                          std::string specular) {
+  _diffuse = Image(diffuse);
 }
 
 void Model::triangulate(std::vector<int> &faceVertCnt) {
@@ -174,4 +189,12 @@ glm::vec3 Model::norm(const int iface, const int nthnorm) {
 
 int Model::normIdx(const int iface, const int nthnorm) {
   return faces[iface * 3 + nthnorm].norm;
+}
+
+glm::vec2 Model::uv(const int iface, const int nthuv) {
+  return uvs[faces[iface * 3 + nthuv].uv];
+}
+
+int Model::uvIdx(const int iface, const int nthuv) {
+  return faces[iface * 3 + nthuv].uv;
 }

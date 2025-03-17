@@ -34,7 +34,7 @@ class RenderLineTask : public MT::Task {
 public:
   struct Context {
     Model *model;
-    Image *image;
+    ImageBuffer *image;
 
     float zNear, zFar;
 
@@ -55,7 +55,7 @@ class RenderTriangleTask : public MT::Task {
 public:
   struct Context {
     Model *model;
-    Image *image;
+    ImageBuffer *image;
     ZBuffer *zbuffer;
 
     float zNear, zFar;
@@ -80,19 +80,35 @@ class RenderPhongTask : public MT::Task {
 public:
   struct Context {
     Model *model;
-    Image *image;
+    ImageBuffer *image;
     ZBuffer *zbuffer;
-
     float zNear, zFar;
-
     glm::vec3 lightPos, lightColor, viewPos;
-    glm::vec3 ambient, diffuse, specular;
-    float shininess;
-
     std::pair<int, int> range;
   };
 
   RenderPhongTask(Context _ctx);
+
+  void doWork() override;
+
+private:
+  Context _ctx;
+};
+
+class RenderTextureTask : public MT::Task {
+public:
+  struct Context {
+    Model *model;
+    ImageBuffer *image;
+    ZBuffer *zbuffer;
+
+    float zNear, zFar;
+    glm::vec3 lightPos, lightColor, viewPos;
+
+    std::pair<int, int> range;
+  };
+
+  RenderTextureTask(Context _ctx);
 
   void doWork() override;
 

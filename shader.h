@@ -3,6 +3,8 @@
 #ifndef _SHADER_H_
 #define _SHADER_H_
 
+#include "image.h"
+
 #include <cstdint>
 #include <glm/glm.hpp>
 
@@ -39,6 +41,25 @@ public:
     glm::vec3 lightPos, lightColor;
     glm::vec3 ambient, diffuse, specular;
     float shininess;
+  };
+
+  void setContext(Context ctx);
+  uint32_t fragment(glm::vec3 position) override;
+
+private:
+  Context _ctx;
+};
+
+class TextureShader : public Shader {
+public:
+  struct Context {
+    glm::vec4 *vs;
+    glm::vec2 *uvs;
+
+    glm::vec3 viewPos;
+
+    glm::vec3 lightPos, lightColor;
+    Image diffuse, specular, normal;
   };
 
   void setContext(Context ctx);

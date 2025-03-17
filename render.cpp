@@ -72,7 +72,7 @@ RenderTriangleTask::RenderTriangleTask(Context _ctx) : Task() {
 
 void RenderTriangleTask::doWork() {
   Model *model = _ctx.model;
-  Image *image = _ctx.image;
+  ImageBuffer *image = _ctx.image;
   ZBuffer *zbuffer = _ctx.zbuffer;
 
   std::pair<int, int> range = _ctx.range;
@@ -139,7 +139,7 @@ RenderPhongTask::RenderPhongTask(Context _ctx) : Task() { this->_ctx = _ctx; }
 
 void RenderPhongTask::doWork() {
   Model *model = _ctx.model;
-  Image *image = _ctx.image;
+  ImageBuffer *image = _ctx.image;
   ZBuffer *zbuffer = _ctx.zbuffer;
 
   std::pair<int, int> range = _ctx.range;
@@ -197,10 +197,90 @@ void RenderPhongTask::doWork() {
           .viewPos = _ctx.viewPos,
           .lightPos = _ctx.lightPos,
           .lightColor = _ctx.lightColor,
-          .ambient = _ctx.ambient,
-          .diffuse = _ctx.diffuse,
-          .specular = _ctx.specular,
-          .shininess = _ctx.shininess,
+          .ambient = glm::vec3(0.1726, 0.1726, 0.1726),
+          .diffuse = glm::vec3(0.3426, 0.3426, 0.3426),
+          .specular = glm::vec3(0.4634, 0.4634, 0.4634),
+          .shininess = 76.0,
+      };
+      shader.setContext(ctx);
+
+      glm::vec3 vs[3] = {v[0], v[1], v[2]};
+      gl::halfSpaceTriangle(vs, *image, *zbuffer, shader);
+    }
+  }
+}
+
+RenderTextureTask::RenderTextureTask(Context _ctx) : Task() {
+  this->_ctx = _ctx;
+}
+
+void RenderTextureTask::doWork() {
+  Model *model = _ctx.model;
+  ImageBuffer *image = _ctx.image;
+  ZBuffer *zbuffer = _ctx.zbuffer;
+
+  std::pair<int, int> range = _ctx.range;
+  float zNear = _ctx.zNear, zFar = _ctx.zFar;
+
+  TextureShader shader;
+
+  for (int iface = range.first; iface < range.second; iface++) {
+    glm::vec4 v[3] = {
+        model->transformedVerts[model->vertIdx(iface, 0)],
+        model->transformedVerts[model->vertIdx(iface, 1)],
+        model->transformedVerts[model->vertIdx(iface, 2)],
+    };
+
+    bool clip = false;
+
+    for (int i = 0; i < 3; i++) {
+      if (v[i].w < 0.0) {
+        clip = true;
+        break;
+      }
+
+      v[i].x /= v[i].w, v[i].y /= v[i].w, v[i].z /= v[i].w;
+
+      if (v[i].z < zNear || v[i].z > zFar) {
+        clip = true;
+        break;
+      }
+    }
+
+    if (!clip) {
+      glm::vec3 normals[3] = {
+          glm::normalize(model->norm(iface, 0)),
+          glm::normalize(model->norm(iface, 1)),
+          glm::normalize(model->norm(iface, 2)),
+      };
+
+      glm::vec3 worldVs[3] = {
+          model->worldVerts[model->vertIdx(iface, 0)],
+          model->worldVerts[model->vertIdx(iface, 1)],
+          model->worldVerts[model->vertIdx(iface, 2)],
+      };
+
+      glm::vec2 uvs[3] = {
+          model->uv(iface, 0),
+          model->uv(iface, 1),
+          model->uv(iface, 2),
+      };
+
+      glm::vec3 norm = glm::normalize(
+          glm::cross((worldVs[0] - worldVs[1]), (worldVs[2] - worldVs[1])));
+      glm::vec3 faceCenter = (worldVs[0] + worldVs[1] + worldVs[2]) / 3.0f;
+      glm::vec3 viewDir = glm::normalize(faceCenter - _ctx.viewPos);
+      if (glm::dot(viewDir, norm) < 0) {
+        continue;
+      }
+
+      TextureShader::Context ctx = {
+          .vs = v,
+          .uvs = uvs,
+          .viewPos = _ctx.viewPos,
+          .lightPos = _ctx.lightPos,
+          .lightColor = _ctx.lightColor,
+          .diffuse = model->diffuseMap(),
       };
       shader.setContext(ctx);
 

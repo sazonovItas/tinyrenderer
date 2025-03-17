@@ -13,12 +13,6 @@ uint32_t TriangleShader::fragment(glm::vec3 position) {
     intensity += lightIntensity * _ctx.lightColors[i];
   }
 
-  float mxIntensity =
-      std::max(intensity[0], std::max(intensity[1], intensity[2]));
-  if (mxIntensity > 1.0) {
-    intensity /= mxIntensity;
-  }
-
   return Color(intensity.x, intensity.y, intensity.z).color();
 }
 
@@ -49,3 +43,15 @@ uint32_t PhongShader::fragment(glm::vec3 position) {
 }
 
 void PhongShader::setContext(Context ctx) { _ctx = ctx; }
+
+uint32_t TextureShader::fragment(glm::vec3 position) {
+  glm::vec2 uv = (position.x * _ctx.uvs[0] / _ctx.vs[0].w +
+                  position.y * _ctx.uvs[1] / _ctx.vs[1].w +
+                  position.z * _ctx.uvs[2] / _ctx.vs[2].w) /
+                 (position.x / _ctx.vs[0].w + position.y / _ctx.vs[1].w +
+                  position.z / _ctx.vs[2].w);
+
+  return _ctx.diffuse.get_pixel_uv(uv.x, 1.0 - uv.y);
+}
+
+void TextureShader::setContext(Context ctx) { _ctx = ctx; }

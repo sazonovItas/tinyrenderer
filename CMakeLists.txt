@@ -9,6 +9,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(SDL2 REQUIRED)
 find_package(glm REQUIRED)
 
+find_package(PkgConfig REQUIRED)
+pkg_search_module(VIPS REQUIRED vips-cpp)
+pkg_search_module(GLIB REQUIRED glib-2.0)
+
 set(SOURCE
   ${SOURCE}
   ${CMAKE_CURRENT_SOURCE_DIR}/model.cpp
@@ -33,6 +37,8 @@ set(INCLUDE
   ${SDL2_INCLUDE_DIRS}
   ${OPENGL_INCLUDE_DIRS}
   ${GLM_INCLUDE_DIRS}
+  ${GLIB_INCLUDE_DIRS}
+  ${VIPS_INCLUDE_DIRS}
 )
 
 set(LIBRARIES
@@ -40,6 +46,8 @@ set(LIBRARIES
   ${SDL2_LIBRARIES}
   ${OPENGL_LIBRARIES}
   ${GLM_LIBRARIES}
+  ${GLIB_LIBRARIES}
+  ${VIPS_LIBRARIES}
 )
 
 include_directories(${INCLUDE})

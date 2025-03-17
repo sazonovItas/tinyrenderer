@@ -1,13 +1,8 @@
 #include "gl.h"
 #include "geometry.h"
 
-#include <cmath>
-#include <glm/ext/quaternion_geometric.hpp>
-#include <glm/fwd.hpp>
-#include <glm/geometric.hpp>
-#include <limits>
-
-void gl::line(int x0, int y0, int x1, int y1, Image &image, uint32_t color) {
+void gl::line(int x0, int y0, int x1, int y1, ImageBuffer &image,
+              uint32_t color) {
   bool steep = false;
   if (std::abs(x0 - x1) < std::abs(y0 - y1)) {
     std::swap(x0, y0);
@@ -37,7 +32,7 @@ void gl::line(int x0, int y0, int x1, int y1, Image &image, uint32_t color) {
   }
 }
 
-void gl::triangle(glm::vec3 *points, Image &image, ZBuffer &zbuffer,
+void gl::triangle(glm::vec3 *points, ImageBuffer &image, ZBuffer &zbuffer,
                   uint32_t color) {
   glm::vec2 bboxmin(std::numeric_limits<float>::max(),
                     std::numeric_limits<float>::max());
@@ -72,7 +67,7 @@ void gl::triangle(glm::vec3 *points, Image &image, ZBuffer &zbuffer,
   }
 }
 
-void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
+void gl::halfSpaceTriangle(glm::vec3 *p, ImageBuffer &image, ZBuffer &zbuffer,
                            uint32_t color) {
   int xMin =
       std::max(0, (int)std::ceil(std::min(p[0].x, std::min(p[1].x, p[2].x))));
@@ -130,7 +125,7 @@ void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
   }
 }
 
-void gl::halfSpaceTriangle(glm::vec3 *p, Image &image, ZBuffer &zbuffer,
+void gl::halfSpaceTriangle(glm::vec3 *p, ImageBuffer &image, ZBuffer &zbuffer,
                            Shader &shader) {
   int xMin =
       std::max(0, (int)std::ceil(std::min(p[0].x, std::min(p[1].x, p[2].x))));

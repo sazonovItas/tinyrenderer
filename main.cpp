@@ -23,7 +23,8 @@
 #include <iostream>
 #include <stdexcept>
 
-#define MODEL "models/napoleon.obj"
+#define MODEL_FILE "models/cube.obj"
+#define MODEL_DIFFUSE "models/albedo.png"
 
 #define LIGHT_COUNT 2
 #define CAMERA_RADIUS 10.0f
@@ -41,7 +42,12 @@ public:
   }
 
 private:
-  enum RenderMode { RenderLines, RenderTriangles, RenderPhongLight };
+  enum RenderMode {
+    RenderLines,
+    RenderTriangles,
+    RenderPhongLight,
+    RenderTexture
+  };
 
   SDL_Window *window;
   RenderMode currentRenderMode = RenderLines;
@@ -49,7 +55,7 @@ private:
   MT::ThreadPool *threadPool;
 
   Model *model;
-  Image *image;
+  ImageBuffer *image;
   ZBuffer *zbuffer;
 
   Camera camera;
@@ -79,9 +85,11 @@ private:
   std::vector<glm::vec3> lightColors;
 
   void mainLoop() {
-    model = new Model(MODEL);
-    image = new Image(WIDTH, HEIGHT);
+    model = new Model(MODEL_FILE);
+    image = new ImageBuffer(WIDTH, HEIGHT);
     zbuffer = new ZBuffer(WIDTH, HEIGHT);
+
+    model->parseTextures(MODEL_DIFFUSE, "", "");
 
     camera = Camera(glm::vec3(0.0, 0.0, 0.0), CAMERA_RADIUS);
 
@@ -132,6 +140,9 @@ private:
             break;
           case SDLK_3:
             currentRenderMode = RenderPhongLight;
+            break;
+          case SDLK_4:
+            currentRenderMode = RenderTexture;
             break;
           }
 
@@ -213,6 +224,9 @@ private:
     case RenderPhongLight:
       renderPhongLight();
       break;
+    case RenderTexture:
+      renderTexture();
+      break;
     }
   }
 
@@ -278,16 +292,9 @@ private:
         .zbuffer = zbuffer,
         .zNear = Z_NEAR,
         .zFar = Z_FAR,
-
         .lightPos = camera.position(),
         .lightColor = lightColors[0],
         .viewPos = camera.position(),
-
-        // Ruby
-        .ambient = glm::vec3(0.1745, 0.01175, 0.01175),
-        .diffuse = glm::vec3(0.61424, 0.04136, 0.04136),
-        .specular = glm::vec3(0.727811, 0.626959, 0.626959),
-        .shininess = 76.8,
     };
 
     int facePerThread = model->nfaces() / THREAD_COUNT;
@@ -299,6 +306,32 @@ private:
       }
 
       threadPool->addTask(RenderPhongTask(_rctx));
+    }
+
+    threadPool->wait();
+  }
+
+  void renderTexture() {
+    RenderTextureTask::Context _rctx = {
+        .model = model,
+        .image = image,
+        .zbuffer = zbuffer,
+        .zNear = Z_NEAR,
+        .zFar = Z_FAR,
+        .lightPos = camera.position(),
+        .lightColor = lightColors[0],
+        .viewPos = camera.position(),
+    };
+
+    int facePerThread = model->nfaces() / THREAD_COUNT;
+
+    for (int i = 0; i < THREAD_COUNT; i++) {
+      _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
+      if (i == THREAD_COUNT - 1) {
+        _rctx.range.second = model->nfaces();
+      }
+
+      threadPool->addTask(RenderTextureTask(_rctx));
     }
 
     threadPool->wait();
