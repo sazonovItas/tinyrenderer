@@ -2,7 +2,9 @@
 #include "color.h"
 
 #include <cmath>
+#include <glm/common.hpp>
 #include <glm/geometric.hpp>
+#include <glm/gtc/color_space.hpp>
 
 uint32_t TriangleShader::fragment(glm::vec3 position) {
   glm::vec3 intensity(0.1, 0.1, 0.1);
@@ -39,19 +41,44 @@ uint32_t PhongShader::fragment(glm::vec3 position) {
 
   glm::vec3 intensity = _ctx.ambient + diffuseColor + specularColor;
 
-  return Color(intensity.x, intensity.y, intensity.z).color();
+  return Color(intensity.r, intensity.g, intensity.b).color();
 }
 
 void PhongShader::setContext(Context ctx) { _ctx = ctx; }
 
 uint32_t TextureShader::fragment(glm::vec3 position) {
+  glm::vec3 fragPos = _ctx.worldVs[0] * position.x +
+                      _ctx.worldVs[1] * position.y +
+                      _ctx.worldVs[2] * position.z;
   glm::vec2 uv = (position.x * _ctx.uvs[0] / _ctx.vs[0].w +
                   position.y * _ctx.uvs[1] / _ctx.vs[1].w +
                   position.z * _ctx.uvs[2] / _ctx.vs[2].w) /
                  (position.x / _ctx.vs[0].w + position.y / _ctx.vs[1].w +
                   position.z / _ctx.vs[2].w);
 
-  return _ctx.diffuse.get_pixel_uv(uv.x, 1.0 - uv.y);
+  uv = glm::clamp(uv, glm::vec2(0.0, 0.0), glm::vec2(1.0, 1.0));
+
+  glm::vec3 diffuse = _ctx.diffuse.getColorUV(uv.x, 1.0 - uv.y);
+  glm::vec3 objNorm = _ctx.normal.getColorUV(uv.x, 1.0 - uv.y);
+  objNorm.x = objNorm.x * 2 - 1;
+  objNorm.y = objNorm.y * 2 - 1;
+  objNorm.z = objNorm.z * 2 - 1;
+  objNorm = glm::normalize(objNorm);
+  glm::vec3 specular = _ctx.specular.getColorUV(uv.x, 1.0 - uv.y);
+
+  glm::vec3 lightDir = glm::normalize(_ctx.lightPos - fragPos);
+  glm::vec3 viewDir = glm::normalize(_ctx.viewPos - fragPos);
+
+  glm::vec3 reflectDir = glm::reflect(-lightDir, objNorm);
+  float specularK = pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), 0.6f);
+  glm::vec3 specularColor = _ctx.lightColor * (specularK * specular);
+
+  float diffuseK = std::max(0.0f, glm::dot(objNorm, lightDir));
+  glm::vec3 diffuseColor = _ctx.lightColor * (diffuseK * diffuse);
+
+  glm::vec3 intensity = diffuseColor + specularColor;
+
+  return Color(intensity.r, intensity.g, intensity.b).color();
 }
 
 void TextureShader::setContext(Context ctx) { _ctx = ctx; }

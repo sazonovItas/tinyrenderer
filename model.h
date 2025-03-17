@@ -23,8 +23,8 @@ class Model {
   std::vector<Index> faces = {};
 
   Image _diffuse;
-  Image _specular;
   Image _normal;
+  Image _specular;
 
   void triangulate(std::vector<int> &faceVertCnt);
 
@@ -55,6 +55,8 @@ public:
                      std::string specular);
 
   Image diffuseMap() { return _diffuse; }
+  Image normalMap() { return _normal; }
+  Image specularMap() { return _specular; }
 };
 
 #endif

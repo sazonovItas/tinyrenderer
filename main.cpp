@@ -23,8 +23,10 @@
 #include <iostream>
 #include <stdexcept>
 
-#define MODEL_FILE "models/cube.obj"
-#define MODEL_DIFFUSE "models/albedo.png"
+#define MODEL_FILE "models/house.obj"
+#define MODEL_DIFFUSE "models/vera_posed_diffuse.png"
+#define MODEL_NORMAL "models/vera_posed_normal.png"
+#define MODEL_SPECULAR "models/vera_posed_metallic.png"
 
 #define LIGHT_COUNT 2
 #define CAMERA_RADIUS 10.0f
@@ -89,7 +91,7 @@ private:
     image = new ImageBuffer(WIDTH, HEIGHT);
     zbuffer = new ZBuffer(WIDTH, HEIGHT);
 
-    model->parseTextures(MODEL_DIFFUSE, "", "");
+    model->parseTextures(MODEL_DIFFUSE, MODEL_NORMAL, MODEL_SPECULAR);
 
     camera = Camera(glm::vec3(0.0, 0.0, 0.0), CAMERA_RADIUS);
 

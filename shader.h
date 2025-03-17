@@ -55,6 +55,8 @@ public:
   struct Context {
     glm::vec4 *vs;
     glm::vec2 *uvs;
+    glm::vec3 *worldVs;
+    glm::vec3 *normals;
 
     glm::vec3 viewPos;
 

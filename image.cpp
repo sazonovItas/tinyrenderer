@@ -16,24 +16,24 @@ int Image::width() { return _image->Xsize; }
 
 int Image::height() { return _image->Ysize; }
 
-uint32_t Image::get_pixel(int x, int y) {
+uint32_t Image::getPixel(int x, int y) {
   return *(uint32_t *)(VIPS_IMAGE_ADDR(_image, x, y));
 }
 
-uint32_t Image::get_pixel_uv(float x, float y) {
-  return get_pixel(x * width(), y * height());
+uint32_t Image::getPixelUV(float x, float y) {
+  return getPixel(x * width(), y * height());
 }
 
-glm::vec3 Image::get_color(int x, int y) {
-  uint32_t color = get_pixel(x, y);
-  float r = uint8_t(color >> 16) / 255.0;
+glm::vec3 Image::getColor(int x, int y) {
+  uint32_t color = getPixel(x, y);
+  float r = uint8_t(color >> 0) / 255.0;
   float g = uint8_t(color >> 8) / 255.0;
-  float b = uint8_t(color) / 255.0;
+  float b = uint8_t(color >> 16) / 255.0;
   return glm::vec3(r, g, b);
 }
 
-glm::vec3 Image::get_color_uv(float x, float y) {
-  return get_color(x * width(), y * height());
+glm::vec3 Image::getColorUV(float x, float y) {
+  return getColor(x * width(), y * height());
 }
 
 ImageBuffer::ImageBuffer() {}

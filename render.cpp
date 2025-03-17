@@ -277,10 +277,14 @@ void RenderTextureTask::doWork() {
       TextureShader::Context ctx = {
           .vs = v,
           .uvs = uvs,
+          .worldVs = worldVs,
+          .normals = normals,
           .viewPos = _ctx.viewPos,
           .lightPos = _ctx.lightPos,
           .lightColor = _ctx.lightColor,
           .diffuse = model->diffuseMap(),
+          .specular = model->specularMap(),
+          .normal = model->normalMap(),
       };
       shader.setContext(ctx);
 

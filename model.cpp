@@ -95,6 +95,8 @@ Model::Model(const std::string filename) {
 void Model::parseTextures(std::string diffuse, std::string normal,
                           std::string specular) {
   _diffuse = Image(diffuse);
+  _normal = Image(normal);
+  _specular = Image(specular);
 }
 
 void Model::triangulate(std::vector<int> &faceVertCnt) {
@@ -119,7 +121,6 @@ void Model::triangulate(std::vector<int> &faceVertCnt) {
             glm::cross(beforeV[0] - beforeV[1], beforeV[2] - beforeV[1]));
         glm::vec3 right = beforeV[1] - beforeV[0];
         glm::vec3 up = glm::cross(forward, right);
-
         auto triangleMat = geom::view(forward, right, up);
 
         glm::vec3 v[3] = {
@@ -129,13 +130,11 @@ void Model::triangulate(std::vector<int> &faceVertCnt) {
         };
 
         float angle = glm::cross(v[0] - v[1], v[2] - v[1]).z;
-
         if (angle < 0.0) {
           continue;
         }
 
         bool ok = true;
-
         for (int j = (i + 3) % vCnt; j != i; j = (j + 1) % vCnt) {
           glm::vec3 vert = triangleMat * glm::vec4(verts[face[j].vert], 1.0);
 

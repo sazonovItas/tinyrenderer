@@ -39,11 +39,11 @@ public:
   int width();
   int height();
 
-  uint32_t get_pixel(int x, int y);
-  glm::vec3 get_color(int x, int y);
+  uint32_t getPixel(int x, int y);
+  glm::vec3 getColor(int x, int y);
 
-  uint32_t get_pixel_uv(float x, float y);
-  glm::vec3 get_color_uv(float x, float y);
+  uint32_t getPixelUV(float x, float y);
+  glm::vec3 getColorUV(float x, float y);
 };
 
 class ZBuffer {
