@@ -10,6 +10,25 @@
 
 #include <glm/glm.hpp>
 
+class VertexLineTransformTask : public MT::Task {
+public:
+  struct Context {
+    Model *model;
+
+    glm::mat4x4 transform = glm::identity<glm::mat4x4>();
+    glm::mat4x4 proj, view, viewport;
+
+    std::pair<int, int> range;
+  };
+
+  VertexLineTransformTask(Context _ctx);
+
+  void doWork() override;
+
+private:
+  Context _ctx;
+};
+
 class VertexTransformTask : public MT::Task {
 public:
   struct Context {

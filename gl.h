@@ -19,6 +19,7 @@ void halfSpaceTriangle(glm::vec3 *points, ImageBuffer &image, ZBuffer &zubffer,
 
 void halfSpaceTriangle(glm::vec3 *p, ImageBuffer &image, ZBuffer &zbuffer,
                        Shader &shader);
+
 }; // namespace gl
 
 #endif

@@ -5,6 +5,7 @@
 #include <glm/common.hpp>
 #include <glm/geometric.hpp>
 #include <glm/gtc/color_space.hpp>
+#include <glm/matrix.hpp>
 
 uint32_t TriangleShader::fragment(glm::vec3 position) {
   glm::vec3 intensity(0.1, 0.1, 0.1);
@@ -50,6 +51,9 @@ uint32_t TextureShader::fragment(glm::vec3 position) {
   glm::vec3 fragPos = _ctx.worldVs[0] * position.x +
                       _ctx.worldVs[1] * position.y +
                       _ctx.worldVs[2] * position.z;
+  glm::vec3 fragNorm = glm::normalize(position.x * _ctx.normals[0] +
+                                      position.y * _ctx.normals[1] +
+                                      position.z * _ctx.normals[2]);
   glm::vec2 uv = (position.x * _ctx.uvs[0] / _ctx.vs[0].w +
                   position.y * _ctx.uvs[1] / _ctx.vs[1].w +
                   position.z * _ctx.uvs[2] / _ctx.vs[2].w) /
@@ -59,21 +63,23 @@ uint32_t TextureShader::fragment(glm::vec3 position) {
   uv = glm::clamp(uv, glm::vec2(0.0, 0.0), glm::vec2(1.0, 1.0));
 
   glm::vec3 diffuse = _ctx.diffuse.getColorUV(uv.x, 1.0 - uv.y);
-  glm::vec3 objNorm = _ctx.normal.getColorUV(uv.x, 1.0 - uv.y);
-  objNorm.x = objNorm.x * 2 - 1;
-  objNorm.y = objNorm.y * 2 - 1;
-  objNorm.z = objNorm.z * 2 - 1;
-  objNorm = glm::normalize(objNorm);
   glm::vec3 specular = _ctx.specular.getColorUV(uv.x, 1.0 - uv.y);
+
+  glm::vec3 tangent = glm::normalize(
+      _ctx.tangent - glm::dot(_ctx.tangent, fragNorm) * fragNorm);
+  glm::vec3 bitangent = glm::cross(fragNorm, tangent);
+  glm::mat3x3 TBN(tangent, bitangent, fragNorm);
+  glm::vec3 normal =
+      TBN * (2.0f * _ctx.normal.getColorUV(uv.x, 1.0 - uv.y) - 1.0f);
 
   glm::vec3 lightDir = glm::normalize(_ctx.lightPos - fragPos);
   glm::vec3 viewDir = glm::normalize(_ctx.viewPos - fragPos);
 
-  glm::vec3 reflectDir = glm::reflect(-lightDir, objNorm);
+  glm::vec3 reflectDir = glm::reflect(-lightDir, normal);
   float specularK = pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), 0.6f);
   glm::vec3 specularColor = _ctx.lightColor * (specularK * specular);
 
-  float diffuseK = std::max(0.0f, glm::dot(objNorm, lightDir));
+  float diffuseK = std::max(0.0f, glm::dot(normal, lightDir));
   glm::vec3 diffuseColor = _ctx.lightColor * (diffuseK * diffuse);
 
   glm::vec3 intensity = diffuseColor + specularColor;

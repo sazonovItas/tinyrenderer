@@ -23,10 +23,10 @@
 #include <iostream>
 #include <stdexcept>
 
-#define MODEL_FILE "models/house.obj"
-#define MODEL_DIFFUSE "models/vera_posed_diffuse.png"
-#define MODEL_NORMAL "models/vera_posed_normal.png"
-#define MODEL_SPECULAR "models/vera_posed_metallic.png"
+#define MODEL_FILE "models/diablo3_pose.obj"
+#define MODEL_DIFFUSE "models/diablo3_pose_diffuse.tga"
+#define MODEL_NORMAL "models/diablo3_pose_nm_tangent.tga"
+#define MODEL_SPECULAR "models/diablo3_pose_spec.tga"
 
 #define LIGHT_COUNT 2
 #define CAMERA_RADIUS 10.0f
@@ -184,13 +184,81 @@ private:
 #define Z_FAR 100.0f
 #define FOV 90.0f
 
+    threadPool->pause();
+
+    switch (currentRenderMode) {
+    case RenderLines:
+      renderLines();
+      break;
+    case RenderTriangles:
+      renderTriangles();
+      break;
+    case RenderPhongLight:
+      renderPhongLight();
+      break;
+    case RenderTexture:
+      renderTexture();
+      break;
+    }
+  }
+
+  void renderLines() {
     float aspect = float(image->width) / float(image->height);
     glm::mat4x4 proj =
         glm::perspective(glm::radians(FOV), aspect, Z_NEAR, Z_FAR);
     glm::mat4x4 view = camera.view();
     glm::mat4x4 viewport = geom::viewport(0, 0, image->width, image->height);
 
-    threadPool->pause();
+    VertexLineTransformTask::Context _vctx = {
+        .model = model,
+        .proj = proj,
+        .view = view,
+        .viewport = viewport,
+    };
+
+    int vertsPerThread = model->nverts() / THREAD_COUNT;
+    int normsPerThread = model->nnorms() / THREAD_COUNT;
+
+    for (int i = 0; i < THREAD_COUNT; i++) {
+      _vctx.range = {i * vertsPerThread, (i + 1) * vertsPerThread};
+
+      if (i == THREAD_COUNT - 1) {
+        _vctx.range.second = model->nverts();
+      }
+
+      threadPool->addTask(VertexLineTransformTask(_vctx));
+    }
+
+    threadPool->wait();
+
+    RenderLineTask::Context _rctx = {
+        .model = model,
+        .image = image,
+        .zNear = Z_NEAR,
+        .zFar = Z_FAR,
+        .color = 0x00FFFFFF,
+    };
+
+    int facePerThread = model->nfaces() / THREAD_COUNT;
+
+    for (int i = 0; i < THREAD_COUNT; i++) {
+      _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
+      if (i == THREAD_COUNT - 1) {
+        _rctx.range.second = model->nfaces();
+      }
+
+      threadPool->addTask(RenderLineTask(_rctx));
+    }
+
+    threadPool->wait();
+  }
+
+  void renderTriangles() {
+    float aspect = float(image->width) / float(image->height);
+    glm::mat4x4 proj =
+        glm::perspective(glm::radians(FOV), aspect, Z_NEAR, Z_FAR);
+    glm::mat4x4 view = camera.view();
+    glm::mat4x4 viewport = geom::viewport(0, 0, image->width, image->height);
 
     VertexTransformTask::Context _vctx = {
         .model = model,
@@ -216,46 +284,6 @@ private:
 
     threadPool->wait();
 
-    switch (currentRenderMode) {
-    case RenderLines:
-      renderLines();
-      break;
-    case RenderTriangles:
-      renderTriangles();
-      break;
-    case RenderPhongLight:
-      renderPhongLight();
-      break;
-    case RenderTexture:
-      renderTexture();
-      break;
-    }
-  }
-
-  void renderLines() {
-    RenderLineTask::Context _rctx = {
-        .model = model,
-        .image = image,
-        .zNear = Z_NEAR,
-        .zFar = Z_FAR,
-        .color = 0x00FFFFFF,
-    };
-
-    int facePerThread = model->nfaces() / THREAD_COUNT;
-
-    for (int i = 0; i < THREAD_COUNT; i++) {
-      _rctx.range = {i * facePerThread, (i + 1) * facePerThread};
-      if (i == THREAD_COUNT - 1) {
-        _rctx.range.second = model->nfaces();
-      }
-
-      threadPool->addTask(RenderLineTask(_rctx));
-    }
-
-    threadPool->wait();
-  }
-
-  void renderTriangles() {
     lightPositions[0] = camera.position();
 
     RenderTriangleTask::Context _rctx = {
@@ -288,6 +316,36 @@ private:
   }
 
   void renderPhongLight() {
+    float aspect = float(image->width) / float(image->height);
+    glm::mat4x4 proj =
+        glm::perspective(glm::radians(FOV), aspect, Z_NEAR, Z_FAR);
+    glm::mat4x4 view = camera.view();
+    glm::mat4x4 viewport = geom::viewport(0, 0, image->width, image->height);
+
+    VertexTransformTask::Context _vctx = {
+        .model = model,
+        .proj = proj,
+        .view = view,
+        .viewport = viewport,
+    };
+
+    int vertsPerThread = model->nverts() / THREAD_COUNT;
+    int normsPerThread = model->nnorms() / THREAD_COUNT;
+
+    for (int i = 0; i < THREAD_COUNT; i++) {
+      _vctx.range = {i * vertsPerThread, (i + 1) * vertsPerThread};
+      _vctx.rangeNorms = {i * normsPerThread, (i + 1) * normsPerThread};
+
+      if (i == THREAD_COUNT - 1) {
+        _vctx.range.second = model->nverts();
+        _vctx.rangeNorms.second = model->nnorms();
+      }
+
+      threadPool->addTask(VertexTransformTask(_vctx));
+    }
+
+    threadPool->wait();
+
     RenderPhongTask::Context _rctx = {
         .model = model,
         .image = image,
@@ -314,6 +372,36 @@ private:
   }
 
   void renderTexture() {
+    float aspect = float(image->width) / float(image->height);
+    glm::mat4x4 proj =
+        glm::perspective(glm::radians(FOV), aspect, Z_NEAR, Z_FAR);
+    glm::mat4x4 view = camera.view();
+    glm::mat4x4 viewport = geom::viewport(0, 0, image->width, image->height);
+
+    VertexTransformTask::Context _vctx = {
+        .model = model,
+        .proj = proj,
+        .view = view,
+        .viewport = viewport,
+    };
+
+    int vertsPerThread = model->nverts() / THREAD_COUNT;
+    int normsPerThread = model->nnorms() / THREAD_COUNT;
+
+    for (int i = 0; i < THREAD_COUNT; i++) {
+      _vctx.range = {i * vertsPerThread, (i + 1) * vertsPerThread};
+      _vctx.rangeNorms = {i * normsPerThread, (i + 1) * normsPerThread};
+
+      if (i == THREAD_COUNT - 1) {
+        _vctx.range.second = model->nverts();
+        _vctx.rangeNorms.second = model->nnorms();
+      }
+
+      threadPool->addTask(VertexTransformTask(_vctx));
+    }
+
+    threadPool->wait();
+
     RenderTextureTask::Context _rctx = {
         .model = model,
         .image = image,

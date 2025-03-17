@@ -61,6 +61,8 @@ public:
     glm::vec3 viewPos;
 
     glm::vec3 lightPos, lightColor;
+
+    glm::vec3 tangent;
     Image diffuse, specular, normal;
   };
 

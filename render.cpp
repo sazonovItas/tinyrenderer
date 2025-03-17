@@ -1,9 +1,25 @@
 #include "render.h"
+#include "geometry.h"
 #include "gl.h"
 #include "shader.h"
 
 #include <glm/fwd.hpp>
 #include <glm/geometric.hpp>
+
+VertexLineTransformTask::VertexLineTransformTask(Context _ctx) : Task() {
+  this->_ctx = _ctx;
+}
+
+void VertexLineTransformTask::doWork() {
+  Model *model = _ctx.model;
+  std::pair<int, int> range = _ctx.range;
+
+  glm::mat4x4 mat = _ctx.viewport * _ctx.proj * _ctx.view * _ctx.transform;
+
+  for (int i = range.first; i < range.second; i++) {
+    model->transformedVerts[i] = mat * glm::vec4(model->vert(i), 1.0);
+  }
+}
 
 VertexTransformTask::VertexTransformTask(Context _ctx) : Task() {
   this->_ctx = _ctx;
@@ -248,22 +264,11 @@ void RenderTextureTask::doWork() {
     }
 
     if (!clip) {
-      glm::vec3 normals[3] = {
-          glm::normalize(model->norm(iface, 0)),
-          glm::normalize(model->norm(iface, 1)),
-          glm::normalize(model->norm(iface, 2)),
-      };
 
       glm::vec3 worldVs[3] = {
           model->worldVerts[model->vertIdx(iface, 0)],
           model->worldVerts[model->vertIdx(iface, 1)],
           model->worldVerts[model->vertIdx(iface, 2)],
-      };
-
-      glm::vec2 uvs[3] = {
-          model->uv(iface, 0),
-          model->uv(iface, 1),
-          model->uv(iface, 2),
       };
 
       glm::vec3 norm = glm::normalize(
@@ -274,6 +279,20 @@ void RenderTextureTask::doWork() {
         continue;
       }
 
+      glm::vec3 normals[3] = {
+          glm::normalize(model->norm(iface, 0)),
+          glm::normalize(model->norm(iface, 1)),
+          glm::normalize(model->norm(iface, 2)),
+      };
+
+      glm::vec2 uvs[3] = {
+          model->uv(iface, 0),
+          model->uv(iface, 1),
+          model->uv(iface, 2),
+      };
+
+      glm::vec3 tangent = geom::calcTangent(worldVs, uvs);
+
       TextureShader::Context ctx = {
           .vs = v,
           .uvs = uvs,
@@ -282,6 +301,7 @@ void RenderTextureTask::doWork() {
           .viewPos = _ctx.viewPos,
           .lightPos = _ctx.lightPos,
           .lightColor = _ctx.lightColor,
+          .tangent = tangent,
           .diffuse = model->diffuseMap(),
           .specular = model->specularMap(),
           .normal = model->normalMap(),

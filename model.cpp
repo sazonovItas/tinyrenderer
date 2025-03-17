@@ -76,20 +76,10 @@ Model::Model(const std::string filename) {
 
   triangulate(faceVertCnt);
 
-  transformedVerts = std::vector<glm::vec4>(verts.size());
-  for (int i = 0; i < verts.size(); i++) {
-    transformedVerts[i] = glm::vec4(verts[i], 1.0);
-  }
+  transformedVerts.resize(verts.size());
+  worldVerts.resize(verts.size());
 
-  worldVerts = std::vector<glm::vec4>(verts.size());
-  for (int i = 0; i < verts.size(); i++) {
-    worldVerts[i] = glm::vec4(verts[i], 1.0);
-  }
-
-  worldNorms = std::vector<glm::vec4>(norms.size());
-  for (int i = 0; i < worldNorms.size(); i++) {
-    worldNorms[i] = glm::vec4(norms[i], 0.0);
-  }
+  worldNorms.resize(norms.size());
 }
 
 void Model::parseTextures(std::string diffuse, std::string normal,

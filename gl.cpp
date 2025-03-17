@@ -82,7 +82,7 @@ void gl::halfSpaceTriangle(glm::vec3 *p, ImageBuffer &image, ZBuffer &zbuffer,
   glm::vec2 p2p3 = p[2] - p[1];
   glm::vec2 p3p1 = p[0] - p[2];
 
-  float denom = 1 / geom::peerDot(-p3p1, p1p2);
+  float denom = 1 / geom::peerdot(-p3p1, p1p2);
 
   bool f1 = p2p3.y > 0 || (p2p3.y == 0 && p2p3.x < 0);
   bool f2 = p3p1.y > 0 || (p3p1.y == 0 && p3p1.x < 0);
@@ -93,9 +93,9 @@ void gl::halfSpaceTriangle(glm::vec3 *p, ImageBuffer &image, ZBuffer &zbuffer,
   glm::vec2 pp3 = {p[2].x - xMin, p[2].y - yMin};
 
   glm::vec3 b0 = denom * glm::vec3{
-                             geom::peerDot(pp3, pp2),
-                             geom::peerDot(pp1, pp3),
-                             geom::peerDot(pp2, pp1),
+                             geom::peerdot(pp3, pp2),
+                             geom::peerdot(pp1, pp3),
+                             geom::peerdot(pp2, pp1),
                          };
 
   glm::vec3 dbdx = denom * glm::vec3{
@@ -140,7 +140,7 @@ void gl::halfSpaceTriangle(glm::vec3 *p, ImageBuffer &image, ZBuffer &zbuffer,
   glm::vec2 p2p3 = p[2] - p[1];
   glm::vec2 p3p1 = p[0] - p[2];
 
-  float denom = 1 / geom::peerDot(-p3p1, p1p2);
+  float denom = 1 / geom::peerdot(-p3p1, p1p2);
 
   bool f1 = p2p3.y > 0 || (p2p3.y == 0 && p2p3.x < 0);
   bool f2 = p3p1.y > 0 || (p3p1.y == 0 && p3p1.x < 0);
@@ -151,9 +151,9 @@ void gl::halfSpaceTriangle(glm::vec3 *p, ImageBuffer &image, ZBuffer &zbuffer,
   glm::vec2 pp3 = {p[2].x - xMin, p[2].y - yMin};
 
   glm::vec3 b0 = denom * glm::vec3{
-                             geom::peerDot(pp3, pp2),
-                             geom::peerDot(pp1, pp3),
-                             geom::peerDot(pp2, pp1),
+                             geom::peerdot(pp3, pp2),
+                             geom::peerdot(pp1, pp3),
+                             geom::peerdot(pp2, pp1),
                          };
 
   glm::vec3 dbdx = denom * glm::vec3{

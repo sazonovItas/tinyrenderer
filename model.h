@@ -32,8 +32,9 @@ public:
   Model(const std::string obj);
 
   std::vector<glm::vec4> worldVerts = {};
-  std::vector<glm::vec4> worldNorms = {};
   std::vector<glm::vec4> transformedVerts = {};
+
+  std::vector<glm::vec4> worldNorms = {};
 
   int nverts() const;
   int nfaces() const;

@@ -36,4 +36,20 @@ glm::vec3 geom::barycentric(glm::vec3 A, glm::vec3 B, glm::vec3 C,
   return glm::vec3(-1, 1, 1);
 }
 
-float geom::peerDot(glm::vec2 a, glm::vec2 b) { return a.x * b.y - a.y * b.x; }
+float geom::peerdot(glm::vec2 a, glm::vec2 b) { return a.x * b.y - a.y * b.x; }
+
+glm::vec3 geom::calcTangent(glm::vec3 *vs, glm::vec2 *uvs) {
+  glm::vec3 e1 = vs[1] - vs[0];
+  glm::vec3 e2 = vs[2] - vs[0];
+  glm::vec2 dUV1 = uvs[1] - uvs[0];
+  glm::vec2 dUV2 = uvs[2] - uvs[0];
+
+  float f = 1.0f / peerdot(dUV1, dUV2);
+
+  glm::vec3 tangent;
+  tangent.x = f * (dUV2.y * e1.x - dUV1.y * e2.x);
+  tangent.y = f * (dUV2.y * e1.y - dUV1.y * e2.y);
+  tangent.z = f * (dUV2.y * e1.z - dUV1.y * e2.z);
+
+  return tangent;
+}
