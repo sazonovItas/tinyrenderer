@@ -25,6 +25,7 @@ class Model {
   Image _diffuse;
   Image _normal;
   Image _specular;
+  Image _glow;
 
   void triangulate(std::vector<int> &faceVertCnt);
 
@@ -53,11 +54,12 @@ public:
   int uvIdx(const int iface, const int nthuv);
 
   void parseTextures(std::string diffuse, std::string normal,
-                     std::string specular);
+                     std::string specular, std::string glow);
 
   Image diffuseMap() { return _diffuse; }
   Image normalMap() { return _normal; }
   Image specularMap() { return _specular; }
+  Image glowMap() { return _glow; }
 };
 
 #endif

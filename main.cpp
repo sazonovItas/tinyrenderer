@@ -23,13 +23,14 @@
 #include <iostream>
 #include <stdexcept>
 
-#define MODEL_FILE "models/diablo3_pose.obj"
-#define MODEL_DIFFUSE "models/diablo3_pose_diffuse.tga"
-#define MODEL_NORMAL "models/diablo3_pose_nm_tangent.tga"
-#define MODEL_SPECULAR "models/diablo3_pose_spec.tga"
+#define MODEL_FILE "models/recon_helmet.obj"
+#define MODEL_DIFFUSE "models/recon_helmet_diffuse.png"
+#define MODEL_NORMAL "models/recon_helmet_normal.png"
+#define MODEL_SPECULAR "models/recon_helmet_specular.png"
+#define MODEL_GLOW "models/diablo3_pose_glow.tga"
 
 #define LIGHT_COUNT 2
-#define CAMERA_RADIUS 10.0f
+#define CAMERA_RADIUS 100.0f
 
 uint32_t WIDTH = 1920;
 uint32_t HEIGHT = 1080;
@@ -91,7 +92,8 @@ private:
     image = new ImageBuffer(WIDTH, HEIGHT);
     zbuffer = new ZBuffer(WIDTH, HEIGHT);
 
-    model->parseTextures(MODEL_DIFFUSE, MODEL_NORMAL, MODEL_SPECULAR);
+    model->parseTextures(MODEL_DIFFUSE, MODEL_NORMAL, MODEL_SPECULAR,
+                         MODEL_GLOW);
 
     camera = Camera(glm::vec3(0.0, 0.0, 0.0), CAMERA_RADIUS);
 

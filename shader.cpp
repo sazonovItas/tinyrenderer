@@ -69,14 +69,14 @@ uint32_t TextureShader::fragment(glm::vec3 position) {
       _ctx.tangent - glm::dot(_ctx.tangent, fragNorm) * fragNorm);
   glm::vec3 bitangent = glm::cross(fragNorm, tangent);
   glm::mat3x3 TBN(tangent, bitangent, fragNorm);
-  glm::vec3 normal =
-      TBN * (2.0f * _ctx.normal.getColorUV(uv.x, 1.0 - uv.y) - 1.0f);
+  glm::vec3 normal = glm::normalize(
+      TBN * (2.0f * _ctx.normal.getColorUV(uv.x, 1.0 - uv.y) - 1.0f));
 
   glm::vec3 lightDir = glm::normalize(_ctx.lightPos - fragPos);
   glm::vec3 viewDir = glm::normalize(_ctx.viewPos - fragPos);
 
   glm::vec3 reflectDir = glm::reflect(-lightDir, normal);
-  float specularK = pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), 0.6f);
+  float specularK = pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), 60.0f);
   glm::vec3 specularColor = _ctx.lightColor * (specularK * specular);
 
   float diffuseK = std::max(0.0f, glm::dot(normal, lightDir));

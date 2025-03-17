@@ -305,6 +305,7 @@ void RenderTextureTask::doWork() {
           .diffuse = model->diffuseMap(),
           .specular = model->specularMap(),
           .normal = model->normalMap(),
+          .glow = model->glowMap(),
       };
       shader.setContext(ctx);
 
