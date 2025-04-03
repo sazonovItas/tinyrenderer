@@ -25,7 +25,7 @@ class Model {
   Image _diffuse;
   Image _normal;
   Image _specular;
-  Image _glow;
+  Image _shininess;
 
   void triangulate(std::vector<int> &faceVertCnt);
 
@@ -59,7 +59,7 @@ public:
   Image diffuseMap() { return _diffuse; }
   Image normalMap() { return _normal; }
   Image specularMap() { return _specular; }
-  Image glowMap() { return _glow; }
+  Image shininessMap() { return _shininess; }
 };
 
 #endif

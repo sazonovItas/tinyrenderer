@@ -63,7 +63,7 @@ public:
     glm::vec3 lightPos, lightColor;
 
     glm::vec3 tangent;
-    Image diffuse, specular, normal, glow;
+    Image diffuse, specular, normal, shininess;
   };
 
   void setContext(Context ctx);

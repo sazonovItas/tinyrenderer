@@ -111,8 +111,7 @@ void RenderTriangleTask::doWork() {
         break;
       }
 
-      v[i].x /= v[i].w, v[i].y /= v[i].w, v[i].z /= v[i].w, v[i].w /= v[i].w;
-
+      v[i].x /= v[i].w, v[i].y /= v[i].w, v[i].z /= v[i].w;
       if (v[i].z < zNear || v[i].z > zFar) {
         clip = true;
         break;
@@ -120,15 +119,14 @@ void RenderTriangleTask::doWork() {
     }
 
     if (!clip) {
-      glm::vec3 norm = glm::normalize(
-          glm::cross((model->vert(iface, 0) - model->vert(iface, 1)),
-                     (model->vert(iface, 2) - model->vert(iface, 0))));
-
       glm::vec3 worldV[3] = {
           model->worldVerts[model->vertIdx(iface, 0)],
           model->worldVerts[model->vertIdx(iface, 1)],
           model->worldVerts[model->vertIdx(iface, 2)],
       };
+
+      glm::vec3 norm = glm::normalize(
+          glm::cross((worldV[0] - worldV[1]), (worldV[2] - worldV[1])));
 
       glm::vec3 fragPos = (worldV[0] + worldV[1] + worldV[2]) / 3.0f;
       glm::vec3 viewDir = glm::normalize(fragPos - _ctx.viewPos);
@@ -305,7 +303,7 @@ void RenderTextureTask::doWork() {
           .diffuse = model->diffuseMap(),
           .specular = model->specularMap(),
           .normal = model->normalMap(),
-          .glow = model->glowMap(),
+          .shininess = model->shininessMap(),
       };
       shader.setContext(ctx);
 

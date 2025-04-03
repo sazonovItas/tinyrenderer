@@ -64,6 +64,7 @@ uint32_t TextureShader::fragment(glm::vec3 position) {
 
   glm::vec3 diffuse = _ctx.diffuse.getColorUV(uv.x, 1.0 - uv.y);
   glm::vec3 specular = _ctx.specular.getColorUV(uv.x, 1.0 - uv.y);
+  float shininess = _ctx.shininess.getPixelUV(uv.x, 1.0 - uv.y);
 
   glm::vec3 tangent = glm::normalize(
       _ctx.tangent - glm::dot(_ctx.tangent, fragNorm) * fragNorm);
@@ -76,7 +77,7 @@ uint32_t TextureShader::fragment(glm::vec3 position) {
   glm::vec3 viewDir = glm::normalize(_ctx.viewPos - fragPos);
 
   glm::vec3 reflectDir = glm::reflect(-lightDir, normal);
-  float specularK = pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), 60.0f);
+  float specularK = pow(std::max(glm::dot(viewDir, reflectDir), 0.0f), 200.0f);
   glm::vec3 specularColor = _ctx.lightColor * (specularK * specular);
 
   float diffuseK = std::max(0.0f, glm::dot(normal, lightDir));

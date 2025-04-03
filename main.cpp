@@ -27,10 +27,28 @@
 #define MODEL_DIFFUSE "models/recon_helmet_diffuse.png"
 #define MODEL_NORMAL "models/recon_helmet_normal.png"
 #define MODEL_SPECULAR "models/recon_helmet_specular.png"
-#define MODEL_GLOW "models/diablo3_pose_glow.tga"
+#define MODEL_SHININESS "models/recon_helmet_shininess.png"
+
+#define MODEL_FILE "models/diablo3_pose.obj"
+#define MODEL_DIFFUSE "models/diablo3_pose_diffuse.tga"
+#define MODEL_NORMAL "models/diablo3_pose_nm_tangent.tga"
+#define MODEL_SPECULAR "models/diablo3_pose_spec.tga"
+#define MODEL_SHININESS "models/diablo3_pose_shininess.tga"
+
+#define MODEL_FILE "models/house.obj"
+#define MODEL_DIFFUSE "models/cube.png"
+#define MODEL_NORMAL "models/cube.png"
+#define MODEL_SPECULAR "models/cube.png"
+#define MODEL_SHININESS "models/cube.png"
+
+#define MODEL_FILE "models/skull.obj"
+#define MODEL_DIFFUSE "models/skull_diff.jpg"
+#define MODEL_NORMAL "models/skull_norm.jpg"
+#define MODEL_SPECULAR "models/skull_diff.jpg"
+#define MODEL_SHININESS "models/skull_diff.jpg"
 
 #define LIGHT_COUNT 2
-#define CAMERA_RADIUS 100.0f
+#define CAMERA_RADIUS 10.0f
 
 uint32_t WIDTH = 1920;
 uint32_t HEIGHT = 1080;
@@ -93,7 +111,7 @@ private:
     zbuffer = new ZBuffer(WIDTH, HEIGHT);
 
     model->parseTextures(MODEL_DIFFUSE, MODEL_NORMAL, MODEL_SPECULAR,
-                         MODEL_GLOW);
+                         MODEL_SHININESS);
 
     camera = Camera(glm::vec3(0.0, 0.0, 0.0), CAMERA_RADIUS);
 
@@ -262,7 +280,7 @@ private:
     glm::mat4x4 view = camera.view();
     glm::mat4x4 viewport = geom::viewport(0, 0, image->width, image->height);
 
-    VertexTransformTask::Context _vctx = {
+    VertexLineTransformTask::Context _vctx = {
         .model = model,
         .proj = proj,
         .view = view,
@@ -270,18 +288,14 @@ private:
     };
 
     int vertsPerThread = model->nverts() / THREAD_COUNT;
-    int normsPerThread = model->nnorms() / THREAD_COUNT;
-
     for (int i = 0; i < THREAD_COUNT; i++) {
       _vctx.range = {i * vertsPerThread, (i + 1) * vertsPerThread};
-      _vctx.rangeNorms = {i * normsPerThread, (i + 1) * normsPerThread};
 
       if (i == THREAD_COUNT - 1) {
         _vctx.range.second = model->nverts();
-        _vctx.rangeNorms.second = model->nnorms();
       }
 
-      threadPool->addTask(VertexTransformTask(_vctx));
+      threadPool->addTask(VertexLineTransformTask(_vctx));
     }
 
     threadPool->wait();

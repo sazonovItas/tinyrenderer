@@ -83,11 +83,11 @@ Model::Model(const std::string filename) {
 }
 
 void Model::parseTextures(std::string diffuse, std::string normal,
-                          std::string specular, std::string glow) {
+                          std::string specular, std::string shininess) {
   _diffuse = Image(diffuse);
   _normal = Image(normal);
   _specular = Image(specular);
-  _glow = Image(glow);
+  _shininess = Image(shininess);
 }
 
 void Model::triangulate(std::vector<int> &faceVertCnt) {
